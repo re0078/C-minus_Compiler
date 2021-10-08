@@ -1,14 +1,22 @@
 from enum import Enum
-import re as regex
+
+num_set = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
+alphanum_set = ['A', 'a', 'B', 'b', 'C', 'c', 'D', 'd', 'E', 'e', 'F', 'f', 'G', 'g', 'H', 'h', 'I', 'i', 'J', 'j', 'K',
+                'k', 'L', 'l', 'M', 'm', 'N', 'n', 'O', 'o', 'P', 'p', 'Q', 'q', 'R', 'r', 'S', 's', 'T', 't', 'U', 'u',
+                'V', 'v', 'W', 'w', 'X', 'x', 'Y', 'y', 'Z', 'z'] + num_set
+keywords_set = ['if', 'else', 'return', 'break', 'until', 'repeat', 'int', 'void']
+symbols_set = [';', ':', ',', '[', ']', '(', ')', '{', '}', '+', '-', '*', '=', '<']
+comment_set = ['/*', '//']
+whitespaces_set = [' ', '\n', '\r', '\t', '\v', '\f']
 
 
 class TokenType(Enum):
-    NUM = (1, regex.compile("^[0-9]+$")),
-    ID = (2, regex.compile("^[A-Za-z][A-Za-z0-9]*$")),
-    KEYWORD = (3, regex.compile("^(if|else|void|int|repeat|break|until|return)$")),
-    SYMBOL = (4, regex.compile("^([;:,\[\]{}()*+\-<]+|=|==)$")),
-    COMMENT = (5, regex.compile("^(/\*(\n|.)*\*/|//.*\n?)$")),
-    WHITESPACE = (6, regex.compile("(\s\n\r\t\v\f)"))
+    NUM = (1, num_set),
+    ID = (2, alphanum_set),
+    KEYWORD = (3, keywords_set),
+    SYMBOL = (4, symbols_set),
+    COMMENT = (5, comment_set),
+    WHITESPACE = (6, whitespaces_set)
 
 
 def get_next_token(seq: str) -> (Enum, str):
