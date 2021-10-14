@@ -76,6 +76,7 @@ def get_next_token(file) -> (bool, Enum, str):
             _asterisk_flag = True
         if _asterisk_flag and c == comment_set:
             send_error()
+            _asterisk_flag = False
         if _keyword_flag:
             handle_keyword(_cur_seq)
 
