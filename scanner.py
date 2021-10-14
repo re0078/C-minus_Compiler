@@ -20,6 +20,8 @@ def scan_process(c: str, token_type: TokenType) -> (bool, bool):
     cur_state = token_type.get_state(_cur_state_order)
     if token_type == TokenType.ID and _cur_seq in TokenType.KEYWORD.get_state(_cur_state_order).valid_set:
         _keyword_flag = True
+    else:
+        _keyword_flag = False
     if c in cur_state.valid_set:
         if cur_state.ends:
             return False, True

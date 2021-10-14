@@ -17,7 +17,7 @@ valid_chars_set = alphanumeric_set.union(symbols_set).union(equal_char_set).unio
 
 class State:
     def __init__(self, valid_set: set, ends: bool, repeatable: bool = False, otherwise_state: int = None,
-                 universal_set: set = None):
+                 universal_set: set = {}):
         self.valid_set = valid_set
         self.ends = ends
         self.repeatable = repeatable
@@ -36,7 +36,7 @@ class State:
 class TokenType(Enum):
     # id, tuple of valid sets
     NUM = (1, (State(num_set, ends=False, repeatable=True))),
-    ID = (2, (State(alphabet_set, ends=False), State(alphabet_set.union(num_set), ends=False, repeatable=True))),
+    ID = (2, (State(alphabet_set, ends=False), State(alphanumeric_set, ends=False, repeatable=True))),
     KEYWORD = (3, (State(keywords_set, ends=True, repeatable=False))),
     SYMBOL = (4, (State(symbols_set, ends=True, otherwise_state=1, universal_set=equal_char_set),
                   State(equal_char_set, ends=True, universal_set=valid_chars_set))),
