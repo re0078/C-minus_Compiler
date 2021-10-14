@@ -5,6 +5,7 @@ _cur_seq = ""
 _remained_char = None
 _cur_state_order = 0
 _keyword_flag = False
+_asterisk_flag = False
 
 
 def flush():
@@ -47,9 +48,13 @@ def handle_keyword(keyword: str):
     pass
 
 
+def send_error():
+    pass
+
+
 # TODO decide for handling errors (can it be done in get_next_token or it has to be done in scan methods?)
 def get_next_token(file) -> (bool, Enum, str):
-    global _cur_seq, _remained_char
+    global _cur_seq, _remained_char, _asterisk_flag
     # todo handle remained char here
     c = file.read(1)  # initial character
     if not c:
@@ -67,6 +72,10 @@ def get_next_token(file) -> (bool, Enum, str):
             if not c:
                 return True, TokenType.EOF, ""
             read, accepted = scan_process(c, token_type)
+        if c == asterisk_set:
+            _asterisk_flag = True
+        if _asterisk_flag and c == comment_set:
+            send_error()
         if _keyword_flag:
             handle_keyword(_cur_seq)
 
