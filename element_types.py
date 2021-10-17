@@ -17,7 +17,9 @@ valid_chars_set = alphanumeric_set.union(symbols_set).union(equal_char_set).unio
 
 class State:
     def __init__(self, valid_set: set, ends: bool, repeatable: bool = False, otherwise_state: int = None,
-                 universal_set: set = {}):
+                 universal_set=None):
+        if universal_set is None:
+            universal_set = {}
         self.valid_set = valid_set
         self.ends = ends
         self.repeatable = repeatable
@@ -34,18 +36,18 @@ class State:
 
 
 class TokenType(Enum):
-    # id, tuple of valid sets
+    """ id, tuple of valid states """
     NUM = (1, (State(num_set, ends=False, repeatable=True))),
     ID = (2, (State(alphabet_set, ends=False), State(alphanumeric_set, ends=False, repeatable=True))),
-    KEYWORD = (3, (State(keywords_set, ends=True, repeatable=False))),
-    SYMBOL = (4, (State(symbols_set, ends=True, otherwise_state=1, universal_set=equal_char_set),
+    SYMBOL = (3, (State(symbols_set, ends=True, otherwise_state=1, universal_set=equal_char_set),
                   State(equal_char_set, ends=True, universal_set=valid_chars_set))),
-    COMMENT = (5, (State(comment_set, ends=False),
+    COMMENT = (4, (State(comment_set, ends=False),
                    State(asterisk_set, ends=False, otherwise_state=4, universal_set=comment_set),
                    State(asterisk_set, ends=False, otherwise_state=2, universal_set=valid_chars_set)),
                State(comment_set, ends=True, otherwise_state=2, universal_set=valid_chars_set),
                State(next_line_set, ends=True, otherwise_state=4, universal_set=valid_chars_set)),
-    WHITESPACE = (6, (State(whitespaces_set, ends=True)))
+    WHITESPACE = (5, (State(whitespaces_set, ends=True)))
+    KEYWORD = (6, (State(keywords_set, ends=True, repeatable=False))),
     EOF = (7, {}, {})
 
     def get_state(self, state_order: int) -> State:
