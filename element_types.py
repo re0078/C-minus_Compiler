@@ -12,6 +12,7 @@ equal_char_set = {'='}
 comment_set = {'/'}
 next_line_set = {'\n'}
 whitespaces_set = {' ', '\r', '\t', '\v', '\f'}.union(next_line_set)
+empty_set = set()
 valid_chars_set = alphanumeric_set.union(symbols_set).union(equal_char_set).union(comment_set).union(whitespaces_set)
 
 
@@ -37,18 +38,22 @@ class State:
 
 class TokenType(Enum):
     """ id, tuple of valid states """
-    NUM = (1, (State(num_set, ends=False, repeatable=True))),
+    NUM = (1, (State(num_set, ends=False, repeatable=True),)),
     ID = (2, (State(alphabet_set, ends=False), State(alphanumeric_set, ends=False, repeatable=True))),
     SYMBOL = (3, (State(symbols_set, ends=True, otherwise_state=1, universal_set=equal_char_set),
                   State(equal_char_set, ends=True, universal_set=valid_chars_set))),
     COMMENT = (4, (State(comment_set, ends=False),
                    State(asterisk_set, ends=False, otherwise_state=4, universal_set=comment_set),
-                   State(asterisk_set, ends=False, otherwise_state=2, universal_set=valid_chars_set)),
-               State(comment_set, ends=True, otherwise_state=2, universal_set=valid_chars_set),
-               State(next_line_set, ends=True, otherwise_state=4, universal_set=valid_chars_set)),
-    WHITESPACE = (5, (State(whitespaces_set, ends=True)))
-    KEYWORD = (6, (State(keywords_set, ends=True, repeatable=False))),
-    EOF = (7, {}, {})
+                   State(asterisk_set, ends=False, otherwise_state=2, universal_set=valid_chars_set),
+                   State(comment_set, ends=True, otherwise_state=2, universal_set=valid_chars_set),
+                   State(empty_set, ends=True, otherwise_state=4, universal_set=valid_chars_set - next_line_set))),
+    WHITESPACE = (5, (State(whitespaces_set, ends=True),)),
+    KEYWORD = (6, (State(keywords_set, ends=True, repeatable=False),)),
+    EOF = (7, ()),
+    ERROR = (8, ())
 
     def get_state(self, state_order: int) -> State:
         return self.value[0][1][state_order]
+
+    def __str__(self):
+        return '(' + self.name + ', {seq:s})'
