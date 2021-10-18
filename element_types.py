@@ -38,7 +38,8 @@ class State:
 
 class TokenType(Enum):
     """ id, tuple of valid states """
-    NUM = (1, (State(num_set, ends=False, repeatable=True),)),
+    NUM = (1, (State(num_set, ends=False, repeatable=False, otherwise_state=1, universal_set=num_set),
+               State(num_set, ends=False, repeatable=True, universal_set=valid_chars_set - alphabet_set))),
     ID = (2, (State(alphabet_set, ends=False), State(alphanumeric_set, ends=False, repeatable=True))),
     SYMBOL = (3, (State(symbols_set, ends=True, otherwise_state=1, universal_set=equal_char_set),
                   State(equal_char_set, ends=True, universal_set=valid_chars_set))),
