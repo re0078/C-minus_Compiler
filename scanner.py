@@ -43,6 +43,7 @@ def scan_process(c: str, token_type: TokenType) -> (bool, bool):
                 return False, True
             if cur_state.valid_set == empty_set:
                 return False, True
+            return False, False
         else:
             _remained_char = c
             return False, False
@@ -116,8 +117,9 @@ def get_next_token(file) -> (bool, Enum, ErrorType):
     return False, TokenType.ERROR, ErrorType.INVALID_INPUT
 
 
-DEBUG = False
+DEBUG = True
 _line_idx = 1
+_symbol_idx = 1
 
 
 def dprint(*string):  # debug print
@@ -127,7 +129,7 @@ def dprint(*string):  # debug print
 
 
 def run(input_fn: str, tokens_fnf: str, errors_fn: str, symbols_fn: str):
-    global DEBUG, _line_idx, _found_error
+    global DEBUG, _line_idx, _found_error, _symbol_idx
     _found_error = False
     next_line_flag = True
     printing_started = False
@@ -146,14 +148,15 @@ def run(input_fn: str, tokens_fnf: str, errors_fn: str, symbols_fn: str):
                     continue
                 if next_line_flag:
                     if printing_started:
-                        tokens_f.write('\n{lineno:d}. '.format(lineno=_line_idx))
+                        tokens_f.write('\n{lineno:d}.\t'.format(lineno=_line_idx))
                     else:
-                        tokens_f.write('{lineno:d}. '.format(lineno=_line_idx))
+                        tokens_f.write('{lineno:d}.\t'.format(lineno=_line_idx))
                         printing_started = True
                     next_line_flag = False
                 tokens_f.write(str(token).format(seq=_cur_seq) + ' ')
                 if token is TokenType.KEYWORD or token is TokenType.ID:
-                    symbols_f.write(_cur_seq + ',\n')
+                    symbols_f.write(f"{_symbol_idx}.\t{_cur_seq},\n")
+                    _symbol_idx += 1
             else:
                 dprint("End of compilation.")
                 if not _found_error:
