@@ -18,6 +18,8 @@ def flush():
 
 def scan_process(c: str, token_type: TokenType) -> (bool, bool):
     global _cur_seq, _remained_char, _cur_state_order, _token_type_determined
+    if c not in valid_chars_set:
+        return False, False
     cur_state = token_type.get_state(_cur_state_order)
     if c in cur_state.valid_set:
         if cur_state.ends:
@@ -28,7 +30,11 @@ def scan_process(c: str, token_type: TokenType) -> (bool, bool):
         return True, True
     elif c in cur_state.universal_set:
         if cur_state.otherwise_state is None:
-            return False, True
+            _remained_char = c
+            if cur_state.ends:
+                return False, True
+            else:
+                return False, True
         _cur_state_order = cur_state.otherwise_state
         if cur_state.ends:
             return True, True
@@ -105,7 +111,7 @@ def get_next_token(file) -> (bool, Enum, ErrorType):
                 _remained_char = c
                 return False, TokenType.ERROR, ErrorType.UNMATCHED_COMMENT
             elif asterisk_flag:
-                return False, TokenType.SYMBOL
+                return False, TokenType.SYMBOL, None
             if not accepted:
                 return False, TokenType.ERROR, ErrorType.INVALID_INPUT
             if accepted:
