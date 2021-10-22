@@ -15,6 +15,7 @@ whitespaces_set = {' ', '\r', '\t', '\v', '\f'}.union(next_line_set)
 empty_set = set()
 valid_chars_set = alphanumeric_set.union(symbols_set).union(equal_char_set)\
     .union(comment_set).union(whitespaces_set).union(asterisk_set)
+other_chars = set("!@#$%^&_}{?>|':;,.").union(set('"'))
 
 
 class State:
@@ -42,15 +43,15 @@ class TokenType(Enum):
     NUM = State(num_set, ends=False, repeatable=False, otherwise_state=1, universal_set=num_set), \
           State(num_set, ends=False, repeatable=True, universal_set=valid_chars_set - alphabet_set),
     ID = State(alphabet_set, ends=False), State(alphanumeric_set, ends=False, repeatable=True),
+    ASTERISK = State(asterisk_set, ends=True), \
+               State(comment_set, ends=False),
     SYMBOL = State(symbols_set, ends=True, otherwise_state=1, universal_set=equal_char_set), \
              State(equal_char_set, ends=True, universal_set=valid_chars_set),
-    ASTERISK = State(asterisk_set, ends=True, otherwise_state=1, universal_set=asterisk_set), \
-               State(comment_set, ends=False)
     COMMENT = State(comment_set, ends=False), \
               State(asterisk_set, ends=False, otherwise_state=4, universal_set=comment_set), \
-              State(asterisk_set, ends=False, otherwise_state=2, universal_set=valid_chars_set), \
-              State(comment_set, ends=True, otherwise_state=2, universal_set=valid_chars_set), \
-              State(empty_set, ends=True, otherwise_state=4, universal_set=valid_chars_set - next_line_set)
+              State(asterisk_set, ends=False, otherwise_state=2, universal_set=valid_chars_set.union(other_chars)), \
+              State(comment_set, ends=True, otherwise_state=2, universal_set=valid_chars_set.union(other_chars)), \
+              State(empty_set, ends=True, otherwise_state=4, universal_set=(valid_chars_set - next_line_set).union(other_chars))
     WHITESPACE = State(whitespaces_set, ends=True),
     KEYWORD = State(keywords_set, ends=True, repeatable=False),
     EOF = (),

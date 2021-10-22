@@ -18,7 +18,12 @@ def flush():
 
 def scan_process(c: str, token_type: TokenType) -> (bool, bool):
     global _cur_seq, _remained_char, _cur_state_order, _token_type_determined
-    if c not in valid_chars_set:
+    if _token_type_determined and (token_type is TokenType.COMMENT):
+        if c not in valid_chars_set.union(other_chars):
+            _remained_char = c
+            return False, False
+    elif c not in valid_chars_set:
+        _remained_char = c
         return False, False
     cur_state = token_type.get_state(_cur_state_order)
     if c in cur_state.valid_set:
@@ -57,7 +62,9 @@ def scan_process(c: str, token_type: TokenType) -> (bool, bool):
 
 def send_error(error: ErrorType, error_file):
     global _line_idx, _found_error, _cur_seq, _remained_char
-    seq = _cur_seq + _remained_char
+    seq = _cur_seq
+    if seq not in comment_set:
+        seq += _remained_char
     if error != ErrorType.UNCLOSED_COMMENT:
         error.write_to_file(error_file, seq, _line_idx)
     else:
@@ -112,14 +119,12 @@ def get_next_token(file) -> (bool, Enum, ErrorType):
                 return False, TokenType.ERROR, ErrorType.UNMATCHED_COMMENT
             elif asterisk_flag:
                 return False, TokenType.SYMBOL, None
-            if not accepted:
-                return False, TokenType.ERROR, ErrorType.INVALID_INPUT
             if accepted:
                 return get_accepted_token(token_type)
             else:
                 if token_type is TokenType.NUM:
                     return False, TokenType.ERROR, ErrorType.INVALID_NUMBER
-    _remained_char = c
+                return False, TokenType.ERROR, ErrorType.INVALID_INPUT
     return False, TokenType.ERROR, ErrorType.INVALID_INPUT
 
 
@@ -144,6 +149,8 @@ def run(input_fn: str, tokens_fnf: str, errors_fn: str, symbols_fn: str):
         while True:
             eof, token, error = get_next_token(input_f)
             if token is TokenType.ERROR:
+                if _remained_char == "\n":
+                    _line_idx += 1
                 send_error(error, errors_f)
                 continue
             if not eof:
