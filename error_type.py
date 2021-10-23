@@ -2,10 +2,13 @@ from enum import Enum
 
 
 class ErrorType(Enum):
-    INVALID_INPUT = "Invalid Input"
-    UNCLOSED_COMMENT = "Unclosed Comment"
-    UNMATCHED_COMMENT = "Unmatched Comment"
-    INVALID_NUMBER = "Invalid Number"
+    INVALID_INPUT = "Invalid input"
+    UNCLOSED_COMMENT = "Unclosed comment"
+    UNMATCHED_COMMENT = "Unmatched comment"
+    INVALID_NUMBER = "Invalid number"
 
-    def write_to_file(self, file, seq, lineno):
-        file.write(f"{lineno}.\t({seq},{self.value})\n")
+    def write_to_file(self, file, seq, lineno, new_line):
+        if new_line:
+            file.write(f"{lineno}.\t({seq}, {self.value})")
+        else:
+            file.write(f" ({seq}, {self.value})")

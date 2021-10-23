@@ -5,9 +5,9 @@ alphabet_set = {'A', 'a', 'B', 'b', 'C', 'c', 'D', 'd', 'E', 'e', 'F', 'f', 'G',
                 'k', 'L', 'l', 'M', 'm', 'N', 'n', 'O', 'o', 'P', 'p', 'Q', 'q', 'R', 'r', 'S', 's', 'T', 't', 'U', 'u',
                 'V', 'v', 'W', 'w', 'X', 'x', 'Y', 'y', 'Z', 'z'}
 alphanumeric_set = alphabet_set.union(num_set)
-keywords_set = {'if', 'else', 'return', 'break', 'until', 'repeat', 'int', 'void'}
+keywords_list = ['if', 'else', 'void', 'int', 'repeat', 'break', 'until', 'return']
 asterisk_set = {'*'}
-symbols_set = {';', ':', ',', '[', ']', '(', ')', '{', '}', '+', '-', '<'}
+symbols_set = {';', ':', ',', '[', ']', '(', ')', '{', '}', '+', '-', '<'}.union(asterisk_set)
 equal_char_set = {'='}
 comment_set = {'/'}
 next_line_set = {'\n'}
@@ -43,8 +43,6 @@ class TokenType(Enum):
     NUM = State(num_set, ends=False, repeatable=False, otherwise_state=1, universal_set=num_set), \
           State(num_set, ends=False, repeatable=True, universal_set=valid_chars_set - alphabet_set),
     ID = State(alphabet_set, ends=False), State(alphanumeric_set, ends=False, repeatable=True),
-    ASTERISK = State(asterisk_set, ends=True), \
-               State(comment_set, ends=False),
     SYMBOL = State(symbols_set, ends=True, otherwise_state=1, universal_set=equal_char_set), \
              State(equal_char_set, ends=True, universal_set=valid_chars_set),
     COMMENT = State(comment_set, ends=False), \
@@ -53,7 +51,7 @@ class TokenType(Enum):
               State(comment_set, ends=True, otherwise_state=2, universal_set=valid_chars_set.union(other_chars)), \
               State(empty_set, ends=True, otherwise_state=4, universal_set=(valid_chars_set - next_line_set).union(other_chars))
     WHITESPACE = State(whitespaces_set, ends=True),
-    KEYWORD = State(keywords_set, ends=True, repeatable=False),
+    KEYWORD = State(keywords_list, ends=True, repeatable=False),
     EOF = (),
     ERROR = ()
 
@@ -63,6 +61,4 @@ class TokenType(Enum):
     def __str__(self):
         # todo rename asterisk
         name = self.name
-        if self is TokenType.ASTERISK:
-            name = "SYMBOL"
         return '(' + name + ', {seq:s})'

@@ -1,5 +1,6 @@
 from element_types import *
 from error_type import *
+import math
 
 _cur_seq = ""
 _remained_char = ""
@@ -60,26 +61,45 @@ def scan_process(c: str, token_type: TokenType) -> (bool, bool):
             return False, False
 
 
-def send_error(error: ErrorType, error_file):
+def send_error(error: ErrorType, error_file, new_line: bool):
     global _line_idx, _found_error, _cur_seq, _remained_char
-    seq = _cur_seq
-    if seq not in comment_set:
-        seq += _remained_char
+    seq = _cur_seq + _remained_char
     if error != ErrorType.UNCLOSED_COMMENT:
-        error.write_to_file(error_file, seq, _line_idx)
+        error.write_to_file(error_file, seq, _line_idx, new_line)
     else:
-        error.write_to_file(error_file, seq[0:min(len(seq), 7)] + "...", _line_idx)
+        error.write_to_file(error_file, seq[0:min(len(seq), 7)] + "...", _line_idx, new_line)
     _found_error = True
     flush()
 
 
 # todo make sure to handle _remained_char while facing errors
-def get_next_token(file) -> (bool, Enum, ErrorType):
+def get_next_token(file) -> (bool, TokenType, ErrorType):
     global _cur_seq, _remained_char, _line_idx, _found_error, _token_type_determined
+
+    def look_ahead(file, is_asterisk: bool) -> (bool, ErrorType):
+        global _cur_seq
+        look_ahead_c = file.read(1)
+        if not look_ahead_c:
+            return True, None
+        if look_ahead_c not in valid_chars_set:
+            _cur_seq += look_ahead_c
+            return False, ErrorType.INVALID_INPUT
+        if is_asterisk:
+            if look_ahead_c in comment_set:
+                _cur_seq += look_ahead_c
+                return False, ErrorType.UNMATCHED_COMMENT
+            _remained_char = look_ahead_c
+            return False, None
+        else:
+            file.seek(file.tell() - 1, 0)
+            if look_ahead_c in asterisk_set.union(comment_set):
+                return False, None
+            if look_ahead_c in valid_chars_set:
+                return False, ErrorType.INVALID_INPUT
 
     def get_accepted_token(token_type):
         global _cur_seq
-        if (token_type is TokenType.ID) and (_cur_seq in keywords_set):
+        if (token_type is TokenType.ID) and (_cur_seq in keywords_list):
             return False, TokenType.KEYWORD, None
         return False, token_type, None
 
@@ -87,19 +107,26 @@ def get_next_token(file) -> (bool, Enum, ErrorType):
     c = _remained_char if len(_remained_char) != 0 else file.read(1)
     if not c:
         return True, TokenType.EOF, None
-    asterisk_flag = False
     if c in asterisk_set:
-        asterisk_flag = True
+        flush()
+        _cur_seq += c
+        look_ahead_eof, look_ahead_err = look_ahead(file, True)
+        if look_ahead_err is None:
+            return look_ahead_eof, TokenType.SYMBOL, None
+        return look_ahead_eof, TokenType.ERROR, look_ahead_err
 
-    # token_accepted = False
+    if c in comment_set:
+        flush()
+        _cur_seq += c
+        look_ahead_eof, look_ahead_err = look_ahead(file, False)
+        if look_ahead_err is not None:
+            return look_ahead_eof, TokenType.ERROR, look_ahead_err
+
     for token_type in list(TokenType)[:-3]:
         flush()
         read, accepted = scan_process(c, token_type)
-        if asterisk_flag:
-            read = True
         if accepted:
             _token_type_determined = True
-            # token_accepted = True
             _cur_seq += c
         else:
             continue
@@ -114,11 +141,6 @@ def get_next_token(file) -> (bool, Enum, ErrorType):
             _cur_seq += c
         if _token_type_determined:
             _cur_seq = _cur_seq[0:len(_cur_seq) - len(_remained_char)]
-            if asterisk_flag and c in comment_set:
-                _remained_char = c
-                return False, TokenType.ERROR, ErrorType.UNMATCHED_COMMENT
-            elif asterisk_flag:
-                return False, TokenType.SYMBOL, None
             if accepted:
                 return get_accepted_token(token_type)
             else:
@@ -144,17 +166,26 @@ def run(input_fn: str, tokens_fnf: str, errors_fn: str, symbols_fn: str):
     _found_error = False
     next_line_flag = True
     printing_started = False
+    prev_err_line_idx = math.inf
     with open(input_fn, 'r') as input_f, open(tokens_fnf, 'w') as tokens_f, open(errors_fn, 'w') as errors_f, \
             open(symbols_fn, 'w') as symbols_f:
+        ids_table = list()
         while True:
             eof, token, error = get_next_token(input_f)
             if token is TokenType.ERROR:
-                if _remained_char == "\n":
+                if _remained_char in next_line_set:
                     _line_idx += 1
-                send_error(error, errors_f)
+                if prev_err_line_idx < _line_idx:
+                    errors_f.write("\n")
+                    send_error(error, errors_f, True)
+                elif prev_err_line_idx == math.inf:
+                    send_error(error, errors_f, True)
+                else:
+                    send_error(error, errors_f, False)
+                prev_err_line_idx = _line_idx
                 continue
             if not eof:
-                if token is TokenType.WHITESPACE and _cur_seq == "\n":
+                if token is TokenType.WHITESPACE and _cur_seq in next_line_set:
                     next_line_flag = True
                     _line_idx += 1
                 if token is TokenType.WHITESPACE or token is TokenType.COMMENT:
@@ -167,14 +198,21 @@ def run(input_fn: str, tokens_fnf: str, errors_fn: str, symbols_fn: str):
                         printing_started = True
                     next_line_flag = False
                 tokens_f.write(str(token).format(seq=_cur_seq) + ' ')
-                if token is TokenType.KEYWORD or token is TokenType.ID:
-                    symbols_f.write(f"{_symbol_idx}.\t{_cur_seq},\n")
-                    _symbol_idx += 1
+                if token is TokenType.ID:
+                    if _cur_seq not in ids_table:
+                        ids_table.append(_cur_seq)
             else:
                 dprint("End of compilation.")
                 if not _found_error:
                     errors_f.write("There is no lexical error.")
                 break
+        item_no = 1
+        for sym in keywords_list:
+            symbols_f.write(f"{item_no}.\t{sym}\n")
+            item_no += 1
+        for sym in ids_table:
+            symbols_f.write(f"{item_no}.\t{sym}\n")
+            item_no += 1
         input_f.close()
         tokens_f.close()
         errors_f.close()
