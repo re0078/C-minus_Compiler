@@ -77,7 +77,7 @@ def get_next_token(file) -> (bool, TokenType, ErrorType):
     global _cur_seq, _remained_char, _line_idx, _found_error, _token_type_determined
 
     def look_ahead(file, is_asterisk: bool) -> (bool, ErrorType):
-        global _cur_seq
+        global _cur_seq, _remained_char
         look_ahead_c = file.read(1)
         if not look_ahead_c:
             return True, None
@@ -188,6 +188,9 @@ def run(input_fn: str, tokens_fnf: str, errors_fn: str, symbols_fn: str):
                 if token is TokenType.WHITESPACE and _cur_seq in next_line_set:
                     next_line_flag = True
                     _line_idx += 1
+                if token is TokenType.COMMENT and list(next_line_set)[0] in _cur_seq:
+                    for _ in range(_cur_seq.count(list(next_line_set)[0])):
+                        _line_idx += 1
                 if token is TokenType.WHITESPACE or token is TokenType.COMMENT:
                     continue
                 if next_line_flag:

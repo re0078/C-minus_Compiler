@@ -1,17 +1,30 @@
-int min(voi){
-	repeat {
-		x = 23apple;
-		mk3 = x + 1;
-		if (mk3 == 52) {
-			b =# 32;
-			return;
-		}
-		break;}
-	} until (arr[2milk])
-	#this = 2;
-	return;;!
+int main()
+{
+    printf(252);
+
+    int year;
+
+    printf(year);
+    scanf(year);
+
+    if (a % 2) {
+	print( * _ * )
+    }
+    // divisible by 4, 100 and 400
+    if (year > 400 == 0)
+        printf(year+1);
+    switch (a) {
+	case 5:
+		a = a*2;
+	case 7:
+		b = b*2;
+    }
+    while (a > 0) {
+	a = a - 1;
+    }
+    // by100nddntivisibleby400 */
+    repeat {
+	2 * 2 + * 2;
+    } until (a < 2)
+
 }
-// end of the code
-/* end of end of the code
-// hmmmmmm
-@#$#%%$*/
