@@ -189,8 +189,7 @@ def run(input_fn: str, tokens_fnf: str, errors_fn: str, symbols_fn: str):
                     next_line_flag = True
                     _line_idx += 1
                 if token is TokenType.COMMENT and list(next_line_set)[0] in _cur_seq:
-                    for _ in range(_cur_seq.count(list(next_line_set)[0])):
-                        _line_idx += 1
+                    _line_idx += _cur_seq.count(list(next_line_set)[0])
                 if token is TokenType.WHITESPACE or token is TokenType.COMMENT:
                     continue
                 if next_line_flag:
