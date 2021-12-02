@@ -5,7 +5,7 @@ alphabet_set = {'A', 'a', 'B', 'b', 'C', 'c', 'D', 'd', 'E', 'e', 'F', 'f', 'G',
                 'k', 'L', 'l', 'M', 'm', 'N', 'n', 'O', 'o', 'P', 'p', 'Q', 'q', 'R', 'r', 'S', 's', 'T', 't', 'U', 'u',
                 'V', 'v', 'W', 'w', 'X', 'x', 'Y', 'y', 'Z', 'z'}
 alphanumeric_set = alphabet_set.union(num_set)
-keywords_list = ['if', 'else', 'void', 'int', 'repeat', 'break', 'until', 'return']
+keywords_list = ['if', 'else', 'void', 'int', 'repeat', 'break', 'until', 'return', 'endif']
 asterisk_set = {'*'}
 symbols_set = {';', ':', ',', '[', ']', '(', ')', '{', '}', '+', '-', '<'}.union(asterisk_set)
 equal_char_set = {'='}

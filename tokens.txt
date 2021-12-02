@@ -21,4 +21,4 @@
 26.	(KEYWORD, repeat) (SYMBOL, {) 
 27.	(NUM, 2) (SYMBOL, *) (NUM, 2) (SYMBOL, +) (SYMBOL, *) (NUM, 2) (SYMBOL, ;) 
 28.	(SYMBOL, }) (KEYWORD, until) (SYMBOL, () (ID, a) (SYMBOL, <) (NUM, 2) (SYMBOL, )) 
-30.	(SYMBOL, }) 
+30.	(SYMBOL, }) (EOF, $) 

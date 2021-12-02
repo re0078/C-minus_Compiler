@@ -204,6 +204,7 @@ def run(input_fn: str, tokens_fnf: str, errors_fn: str, symbols_fn: str):
                     if _cur_seq not in ids_table:
                         ids_table.append(_cur_seq)
             else:
+                tokens_f.write(str(TokenType.EOF).format(seq="$") + ' ')
                 dprint("End of compilation.")
                 if not _found_error:
                     errors_f.write("There is no lexical error.")
