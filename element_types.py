@@ -13,12 +13,12 @@ comment_set = {'/'}
 next_line_set = {'\n'}
 whitespaces_set = {' ', '\r', '\t', '\v', '\f'}.union(next_line_set)
 empty_set = set()
-valid_chars_set = alphanumeric_set.union(symbols_set).union(equal_char_set)\
+valid_chars_set = alphanumeric_set.union(symbols_set).union(equal_char_set) \
     .union(comment_set).union(whitespaces_set).union(asterisk_set)
 other_chars = set("!@#$%^&_}{?>|':;,.").union(set('"'))
 
 
-class State:
+class ScanState:
     def __init__(self, valid_set: set, ends: bool, repeatable: bool = False, otherwise_state: int = None,
                  universal_set=None):
         if universal_set is None:
@@ -38,27 +38,187 @@ class State:
         return base_str
 
 
-class TokenType(Enum):
+class ScanTokenType(Enum):
     """ tuple of valid states """
-    NUM = State(num_set, ends=False, repeatable=False, otherwise_state=1, universal_set=num_set), \
-          State(num_set, ends=False, repeatable=True, universal_set=valid_chars_set - alphabet_set),
-    ID = State(alphabet_set, ends=False), State(alphanumeric_set, ends=False, repeatable=True),
-    SYMBOL = State(symbols_set, ends=True, otherwise_state=1, universal_set=equal_char_set), \
-             State(equal_char_set, ends=True, universal_set=valid_chars_set),
-    COMMENT = State(comment_set, ends=False), \
-              State(asterisk_set, ends=False, otherwise_state=4, universal_set=comment_set), \
-              State(asterisk_set, ends=False, otherwise_state=2, universal_set=valid_chars_set.union(other_chars)), \
-              State(comment_set, ends=True, otherwise_state=2, universal_set=valid_chars_set.union(other_chars)), \
-              State(empty_set, ends=True, otherwise_state=4, universal_set=(valid_chars_set - next_line_set).union(other_chars))
-    WHITESPACE = State(whitespaces_set, ends=True),
-    KEYWORD = State(keywords_list, ends=True, repeatable=False),
+    NUM = ScanState(num_set, ends=False, repeatable=False, otherwise_state=1, universal_set=num_set), \
+          ScanState(num_set, ends=False, repeatable=True, universal_set=valid_chars_set - alphabet_set),
+    ID = ScanState(alphabet_set, ends=False), ScanState(alphanumeric_set, ends=False, repeatable=True),
+    SYMBOL = ScanState(symbols_set, ends=True, otherwise_state=1, universal_set=equal_char_set), \
+             ScanState(equal_char_set, ends=True, universal_set=valid_chars_set),
+    COMMENT = ScanState(comment_set, ends=False), \
+              ScanState(asterisk_set, ends=False, otherwise_state=4, universal_set=comment_set), \
+              ScanState(asterisk_set, ends=False, otherwise_state=2, universal_set=valid_chars_set.union(other_chars)), \
+              ScanState(comment_set, ends=True, otherwise_state=2, universal_set=valid_chars_set.union(other_chars)), \
+              ScanState(empty_set, ends=True, otherwise_state=4,
+                        universal_set=(valid_chars_set - next_line_set).union(other_chars))
+    WHITESPACE = ScanState(whitespaces_set, ends=True),
+    KEYWORD = ScanState(keywords_list, ends=True, repeatable=False),
     EOF = (),
     ERROR = ()
 
-    def get_state(self, state_order: int) -> State:
+    def get_state(self, state_order: int) -> ScanState:
         return self.value[state_order]
 
     def __str__(self):
         # todo rename asterisk
         name = self.name
         return '(' + name + ', {seq:s})'
+
+
+class ParseTokenType(Enum):
+    TERMINAL = 0,
+    VARIABLE_TERMINAL = 1,
+    NON_TERMINAL = 2,
+
+
+class ParseToken(Enum):
+    EPSILON = (0, ParseTokenType.TERMINAL),
+    PROGRAM = (1, ParseTokenType.NON_TERMINAL),
+    DECLARATION_LIST = (2, ParseTokenType.NON_TERMINAL),
+    DECLARATION = (3, ParseTokenType.NON_TERMINAL),
+    DECLARATION_INITIAL = (4, ParseTokenType.NON_TERMINAL),
+    DECLARATION_PRIME = (5, ParseTokenType.NON_TERMINAL),
+    TYPE_SPECIFIER = (6, ParseTokenType.NON_TERMINAL),
+    ID = (7, ParseTokenType.VARIABLE_TERMINAL),
+    FUN_DECLARATION_PRIME = (8, ParseTokenType.NON_TERMINAL),
+    VAR_DECLARATION_PRIME = (9, ParseTokenType.NON_TERMINAL),
+    SEMICOLON = (10, ParseTokenType.TERMINAL),
+    NUM = (11, ParseTokenType.VARIABLE_TERMINAL),
+    PARENTHESIS_OPEN = (12, ParseTokenType.TERMINAL),
+    PARENTHESIS_CLOSE = (13, ParseTokenType.TERMINAL),
+    PARAMS = (14, ParseTokenType.NON_TERMINAL),
+    COMPOUND_STMT = (15, ParseTokenType.NON_TERMINAL),
+    INT = (16, ParseTokenType.TERMINAL),
+    VOID = (17, ParseTokenType.TERMINAL),
+    PARAM_PRIME = (18, ParseTokenType.NON_TERMINAL),
+    PARAM_LIST = (19, ParseTokenType.NON_TERMINAL),
+    COMMA = (20, ParseTokenType.TERMINAL),
+    BRACKET_OPEN = (21, ParseTokenType.TERMINAL),
+    BRACKET_CLOSE = (22, ParseTokenType.TERMINAL),
+    BRACE_OPEN = (23, ParseTokenType.TERMINAL),
+    BRACE_CLOSE = (24, ParseTokenType.TERMINAL),
+    STATEMENT_LIST = (25, ParseTokenType.NON_TERMINAL),
+    STATEMENT = (26, ParseTokenType.NON_TERMINAL),
+    EXPRESSION_STMT = (27, ParseTokenType.NON_TERMINAL),
+    SELECTION_STMT = (28, ParseTokenType.NON_TERMINAL),
+    ITERATION_STMT = (29, ParseTokenType.NON_TERMINAL),
+    RETURN_STMT = (30, ParseTokenType.NON_TERMINAL),
+    EXPRESSION = (31, ParseTokenType.NON_TERMINAL),
+    BREAK = (32, ParseTokenType.TERMINAL),
+    IF = (33, ParseTokenType.TERMINAL),
+    ELSE_STMT = (34, ParseTokenType.NON_TERMINAL),
+    ENDIF = (35, ParseTokenType.TERMINAL),
+    ELSE = (36, ParseTokenType.TERMINAL),
+    REPEAT = (37, ParseTokenType.TERMINAL),
+    UNTIL = (38, ParseTokenType.TERMINAL),
+    RETURN = (39, ParseTokenType.TERMINAL),
+    RETURN_STMT_PRIME = (40, ParseTokenType.NON_TERMINAL),
+    SIMPLE_EXPRESSION_ZEGOND = (41, ParseTokenType.NON_TERMINAL),
+    B = (42, ParseTokenType.NON_TERMINAL),
+    H = (43, ParseTokenType.NON_TERMINAL),
+    G = (44, ParseTokenType.NON_TERMINAL),
+    D = (45, ParseTokenType.NON_TERMINAL),
+    C = (46, ParseTokenType.NON_TERMINAL),
+    ADDITIVE_EXPRESSION_ZEGOND = (47, ParseTokenType.NON_TERMINAL),
+    ADDITIVE_EXPRESSION_PRIME = (48, ParseTokenType.NON_TERMINAL),
+    RELOP = (49, ParseTokenType.NON_TERMINAL),
+    ADDITIVE_EXPRESSION = (50, ParseTokenType.NON_TERMINAL),
+    LESS = (51, ParseTokenType.TERMINAL),
+    EQUALS = (52, ParseTokenType.TERMINAL),
+    TERM = (53, ParseTokenType.NON_TERMINAL),
+    TERM_PRIME = (54, ParseTokenType.NON_TERMINAL),
+    TERM_ZEGOND = (55, ParseTokenType.NON_TERMINAL),
+    ADDOP = (56, ParseTokenType.NON_TERMINAL),
+    PLUS = (57, ParseTokenType.TERMINAL),
+    MINUS = (58, ParseTokenType.TERMINAL),
+    FACTOR = (59, ParseTokenType.NON_TERMINAL),
+    FACTOR_PRIME = (60, ParseTokenType.NON_TERMINAL),
+    FACTOR_ZEGOND = (61, ParseTokenType.NON_TERMINAL),
+    ASTERISK = (62, ParseTokenType.TERMINAL),
+    VAR_CALL_PRIME = (63, ParseTokenType.NON_TERMINAL),
+    ARGS = (64, ParseTokenType.NON_TERMINAL),
+    VAR_PRIME = (65, ParseTokenType.NON_TERMINAL),
+    ARG_LIST = (66, ParseTokenType.NON_TERMINAL),
+    ARG_LIST_PRIME = (67, ParseTokenType.NON_TERMINAL),
+    DOLLAR = (68, ParseTokenType.TERMINAL),
+    PARAM = (69, ParseTokenType.NON_TERMINAL),
+    SIMPLE_EXPRESSION_PRIME = (70, ParseTokenType.NON_TERMINAL),
+
+
+class ParseRule(Enum):
+    R1 = (ParseToken.PROGRAM, ((ParseToken.DECLARATION_LIST, ParseToken.DOLLAR),)),
+    R2 = (ParseToken.DECLARATION_LIST, ((ParseToken.DECLARATION, ParseToken.DECLARATION_LIST), (ParseToken.EPSILON,))),
+    R3 = (ParseToken.DECLARATION, ((ParseToken.DECLARATION_INITIAL,), (ParseToken.DECLARATION_PRIME,))),
+    R4 = (ParseToken.DECLARATION_INITIAL, ((ParseToken.TYPE_SPECIFIER,), (ParseToken.ID,))),
+    R5 = (ParseToken.DECLARATION_PRIME, ((ParseToken.FUN_DECLARATION_PRIME,), (ParseToken.VAR_DECLARATION_PRIME,))),
+    R6 = (ParseToken.VAR_DECLARATION_PRIME, ((ParseToken.SEMICOLON,), (ParseToken.BRACKET_OPEN, ParseToken.NUM,
+                                                                       ParseToken.BRACE_CLOSE, ParseToken.SEMICOLON))),
+    R7 = (ParseToken.FUN_DECLARATION_PRIME, ((ParseToken.PARENTHESIS_OPEN, ParseToken.PARAMS,
+                                              ParseToken.PARENTHESIS_CLOSE, ParseToken.COMPOUND_STMT),)),
+    R8 = (ParseToken.TYPE_SPECIFIER, ((ParseToken.INT,), (ParseToken.VOID,))),
+    R9 = (ParseToken.PARAMS, ((ParseToken.INT, ParseToken.ID, ParseToken.PARAM_PRIME, ParseToken.PARAM_LIST),
+                              (ParseToken.VOID,))),
+    R10 = (ParseToken.PARAM_LIST, ((ParseToken.COMMA, ParseToken.PARAM, ParseToken.PARAM_LIST), (ParseToken.EPSILON,))),
+    R11 = (ParseToken.PARAM, ((ParseToken.DECLARATION_INITIAL, ParseToken.PARAM_PRIME),)),
+    R12 = (ParseToken.PARAM_PRIME, ((ParseToken.BRACKET_OPEN, ParseToken.BRACKET_CLOSE), (ParseToken.EPSILON,))),
+    R13 = (ParseToken.COMPOUND_STMT, ((ParseToken.BRACE_OPEN, ParseToken.DECLARATION_LIST, ParseToken.STATEMENT_LIST,
+                                       ParseToken.BRACE_CLOSE),)),
+    R14 = (ParseToken.STATEMENT_LIST, ((ParseToken.STATEMENT, ParseToken.STATEMENT_LIST),
+                                       (ParseToken.EPSILON,))),
+    R15 = (ParseToken.STATEMENT, ((ParseToken.EXPRESSION_STMT,), (ParseToken.COMPOUND_STMT,),
+                                  (ParseToken.SELECTION_STMT,), (ParseToken.ITERATION_STMT,),
+                                  (ParseToken.RETURN_STMT,))),
+    R16 = (ParseToken.EXPRESSION_STMT, ((ParseToken.EXPRESSION, ParseToken.SEMICOLON), (ParseToken.BREAK,
+                                                                                        ParseToken.SEMICOLON),
+                                        (ParseToken.SEMICOLON,))),
+    R17 = (ParseToken.SELECTION_STMT, ((ParseToken.IF, ParseToken.PARENTHESIS_OPEN, ParseToken.EXPRESSION,
+                                        ParseToken.PARENTHESIS_CLOSE, ParseToken.STATEMENT, ParseToken.ELSE_STMT),)),
+    R18 = (ParseToken.ELSE_STMT, ((ParseToken.ENDIF,), (ParseToken.ELSE, ParseToken.STATEMENT, ParseToken.ENDIF),)),
+    R19 = (ParseToken.ITERATION_STMT, ((ParseToken.REPEAT, ParseToken.STATEMENT, ParseToken.UNTIL,
+                                        ParseToken.PARENTHESIS_OPEN, ParseToken.EXPRESSION,
+                                        ParseToken.PARENTHESIS_CLOSE),)),
+    R20 = (ParseToken.RETURN_STMT, ((ParseToken.RETURN, ParseToken.RETURN_STMT_PRIME),)),
+    R21 = (ParseToken.RETURN_STMT_PRIME, ((ParseToken.SEMICOLON,), (ParseToken.EXPRESSION, ParseToken.SEMICOLON))),
+    R22 = (ParseToken.EXPRESSION, ((ParseToken.SIMPLE_EXPRESSION_ZEGOND,), (ParseToken.ID, ParseToken.B),)),
+    R23 = (ParseToken.B, ((ParseToken.EXPRESSION,), (ParseToken.BRACKET_OPEN, ParseToken.EXPRESSION,
+                                                     ParseToken.BRACKET_CLOSE, ParseToken.H),
+                          (ParseToken.SIMPLE_EXPRESSION_PRIME,))),
+    R24 = (ParseToken.H, ((ParseToken.EXPRESSION,), (ParseToken.G, ParseToken.D, ParseToken.C))),
+    R25 = (ParseToken.SIMPLE_EXPRESSION_ZEGOND, ((ParseToken.ADDITIVE_EXPRESSION_ZEGOND, ParseToken.C),)),
+    R26 = (ParseToken.SIMPLE_EXPRESSION_PRIME, ((ParseToken.ADDITIVE_EXPRESSION_PRIME, ParseToken.C),)),
+    R27 = (ParseToken.C, ((ParseToken.RELOP, ParseToken.ADDITIVE_EXPRESSION), (ParseToken.EPSILON,))),
+    R28 = (ParseToken.RELOP, ((ParseToken.LESS,), (ParseToken.EQUALS,))),
+    R29 = (ParseToken.ADDITIVE_EXPRESSION, ((ParseToken.TERM, ParseToken.D),)),
+    R30 = (ParseToken.ADDITIVE_EXPRESSION_PRIME, ((ParseToken.TERM_PRIME, ParseToken.D),)),
+    R31 = (ParseToken.ADDITIVE_EXPRESSION_ZEGOND, ((ParseToken.TERM_ZEGOND, ParseToken.D),)),
+    R32 = (ParseToken.D, ((ParseToken.ADDOP, ParseToken.TERM, ParseToken.D), (ParseToken.EPSILON,))),
+    R33 = (ParseToken.ADDOP, ((ParseToken.PLUS,), (ParseToken.MINUS,))),
+    R34 = (ParseToken.TERM, ((ParseToken.FACTOR, ParseToken.G),)),
+    R35 = (ParseToken.TERM_PRIME, ((ParseToken.FACTOR_PRIME, ParseToken.G),)),
+    R36 = (ParseToken.TERM_ZEGOND, ((ParseToken.FACTOR_ZEGOND, ParseToken.G),)),
+    R37 = (ParseToken.G, ((ParseToken.ASTERISK, ParseToken.FACTOR, ParseToken.G), (ParseToken.EPSILON,))),
+    R38 = (ParseToken.FACTOR, ((ParseToken.PARENTHESIS_OPEN, ParseToken.EXPRESSION, ParseToken.PARENTHESIS_CLOSE),
+                               (ParseToken.ID, ParseToken.VAR_CALL_PRIME), (ParseToken.NUM,))),
+    R39 = (ParseToken.VAR_CALL_PRIME, ((ParseToken.PARENTHESIS_OPEN, ParseToken.ARGS, ParseToken.PARENTHESIS_CLOSE),
+                                       (ParseToken.VAR_PRIME,))),
+    R40 = (ParseToken.VAR_PRIME, ((ParseToken.BRACE_OPEN, ParseToken.EXPRESSION, ParseToken.BRACKET_CLOSE),
+                                  (ParseToken.EPSILON,))),
+    R41 = (ParseToken.FACTOR_PRIME, ((ParseToken.PARENTHESIS_OPEN, ParseToken.EXPRESSION, ParseToken.PARENTHESIS_CLOSE),
+                                     (ParseToken.EPSILON,))),
+    R42 = (ParseToken.FACTOR_ZEGOND, ((ParseToken.PARENTHESIS_OPEN, ParseToken.ARGS, ParseToken.PARENTHESIS_CLOSE),
+                                      (ParseToken.EPSILON,))),
+    R43 = (ParseToken.ARGS, ((ParseToken.ARG_LIST,), (ParseToken.EPSILON,),)),
+    R44 = (ParseToken.ARG_LIST, ((ParseToken.EXPRESSION, ParseToken.ARG_LIST_PRIME),)),
+    R45 = (ParseToken.ARG_LIST_PRIME, ((ParseToken.SEMICOLON, ParseToken.EXPRESSION, ParseToken.ARG_LIST_PRIME),
+                                       (ParseToken.EPSILON,))),
+
+    def get_rules(self):
+        return self.value[0][1]
+
+
+def find_rule_by_token(token: ParseToken):
+    rule: ParseRule
+    for rule in ParseRule:
+        if rule.value[0][0] == token:
+            return rule
+    return None

@@ -17,9 +17,9 @@ def flush():
     _token_type_determined = False
 
 
-def scan_process(c: str, token_type: TokenType) -> (bool, bool):
+def scan_process(c: str, token_type: ScanTokenType) -> (bool, bool):
     global _cur_seq, _remained_char, _cur_state_order, _token_type_determined
-    if _token_type_determined and (token_type is TokenType.COMMENT):
+    if _token_type_determined and (token_type is ScanTokenType.COMMENT):
         if c not in valid_chars_set.union(other_chars):
             _remained_char = c
             return False, False
@@ -73,7 +73,7 @@ def send_error(error: ErrorType, error_file, new_line: bool):
 
 
 # todo make sure to handle _remained_char while facing errors
-def get_next_token(file) -> (bool, TokenType, ErrorType):
+def get_next_token(file) -> (bool, ScanTokenType, ErrorType):
     global _cur_seq, _remained_char, _line_idx, _found_error, _token_type_determined
 
     def look_ahead(file, is_asterisk: bool) -> (bool, ErrorType):
@@ -99,30 +99,30 @@ def get_next_token(file) -> (bool, TokenType, ErrorType):
 
     def get_accepted_token(token_type):
         global _cur_seq
-        if (token_type is TokenType.ID) and (_cur_seq in keywords_list):
-            return False, TokenType.KEYWORD, None
+        if (token_type is ScanTokenType.ID) and (_cur_seq in keywords_list):
+            return False, ScanTokenType.KEYWORD, None
         return False, token_type, None
 
     """initial character"""
     c = _remained_char if len(_remained_char) != 0 else file.read(1)
     if not c:
-        return True, TokenType.EOF, None
+        return True, ScanTokenType.EOF, None
     if c in asterisk_set:
         flush()
         _cur_seq += c
         look_ahead_eof, look_ahead_err = look_ahead(file, True)
         if look_ahead_err is None:
-            return look_ahead_eof, TokenType.SYMBOL, None
-        return look_ahead_eof, TokenType.ERROR, look_ahead_err
+            return look_ahead_eof, ScanTokenType.SYMBOL, None
+        return look_ahead_eof, ScanTokenType.ERROR, look_ahead_err
 
     if c in comment_set:
         flush()
         _cur_seq += c
         look_ahead_eof, look_ahead_err = look_ahead(file, False)
         if look_ahead_err is not None:
-            return look_ahead_eof, TokenType.ERROR, look_ahead_err
+            return look_ahead_eof, ScanTokenType.ERROR, look_ahead_err
 
-    for token_type in list(TokenType)[:-3]:
+    for token_type in list(ScanTokenType)[:-3]:
         flush()
         read, accepted = scan_process(c, token_type)
         if accepted:
@@ -136,7 +136,7 @@ def get_next_token(file) -> (bool, TokenType, ErrorType):
             if not c:
                 if accepted:
                     return get_accepted_token(token_type)
-                return True, TokenType.ERROR, ErrorType.UNCLOSED_COMMENT
+                return True, ScanTokenType.ERROR, ErrorType.UNCLOSED_COMMENT
             read, accepted = scan_process(c, token_type)
             _cur_seq += c
         if _token_type_determined:
@@ -144,10 +144,10 @@ def get_next_token(file) -> (bool, TokenType, ErrorType):
             if accepted:
                 return get_accepted_token(token_type)
             else:
-                if token_type is TokenType.NUM:
-                    return False, TokenType.ERROR, ErrorType.INVALID_NUMBER
-                return False, TokenType.ERROR, ErrorType.INVALID_INPUT
-    return False, TokenType.ERROR, ErrorType.INVALID_INPUT
+                if token_type is ScanTokenType.NUM:
+                    return False, ScanTokenType.ERROR, ErrorType.INVALID_NUMBER
+                return False, ScanTokenType.ERROR, ErrorType.INVALID_INPUT
+    return False, ScanTokenType.ERROR, ErrorType.INVALID_INPUT
 
 
 DEBUG = True
@@ -172,7 +172,7 @@ def run(input_fn: str, tokens_fnf: str, errors_fn: str, symbols_fn: str):
         ids_table = list()
         while True:
             eof, token, error = get_next_token(input_f)
-            if token is TokenType.ERROR:
+            if token is ScanTokenType.ERROR:
                 if _remained_char in next_line_set:
                     _line_idx += 1
                 if prev_err_line_idx < _line_idx:
@@ -185,12 +185,12 @@ def run(input_fn: str, tokens_fnf: str, errors_fn: str, symbols_fn: str):
                 prev_err_line_idx = _line_idx
                 continue
             if not eof:
-                if token is TokenType.WHITESPACE and _cur_seq in next_line_set:
+                if token is ScanTokenType.WHITESPACE and _cur_seq in next_line_set:
                     next_line_flag = True
                     _line_idx += 1
-                if token is TokenType.COMMENT and list(next_line_set)[0] in _cur_seq:
+                if token is ScanTokenType.COMMENT and list(next_line_set)[0] in _cur_seq:
                     _line_idx += _cur_seq.count(list(next_line_set)[0])
-                if token is TokenType.WHITESPACE or token is TokenType.COMMENT:
+                if token is ScanTokenType.WHITESPACE or token is ScanTokenType.COMMENT:
                     continue
                 if next_line_flag:
                     if printing_started:
@@ -200,11 +200,11 @@ def run(input_fn: str, tokens_fnf: str, errors_fn: str, symbols_fn: str):
                         printing_started = True
                     next_line_flag = False
                 tokens_f.write(str(token).format(seq=_cur_seq) + ' ')
-                if token is TokenType.ID:
+                if token is ScanTokenType.ID:
                     if _cur_seq not in ids_table:
                         ids_table.append(_cur_seq)
             else:
-                tokens_f.write(str(TokenType.EOF).format(seq="$") + ' ')
+                tokens_f.write(str(ScanTokenType.EOF).format(seq="$") + ' ')
                 dprint("End of compilation.")
                 if not _found_error:
                     errors_f.write("There is no lexical error.")
