@@ -45,7 +45,7 @@ def run(input_fn: str, tokens_fn: str, lexical_errors_fn: str, symbols_fn: str, 
             open(syntax_errors_fn, 'w') as syntax_errors_f:
         ids_table = list()
         parser.build_prediction_table()
-        parse_tokens, depth = (ParseRule.R1.get_token(),), 0
+        parse_tokens, depth = (ParseRule.R1.get_token(),), [0]
         while True:
             eof, scan_token, error, cur_seq, remained_char = scanner.get_next_token(input_f)
             if scan_token is ScanTokenType.ERROR:
@@ -85,13 +85,15 @@ def run(input_fn: str, tokens_fn: str, lexical_errors_fn: str, symbols_fn: str, 
                 if scan_token not in (ScanTokenType.WHITESPACE, ScanTokenType.COMMENT):
                     while epsilon:
                         parse_tokens, depth, epsilon = parser.apply_rule(cur_seq, scan_token, parse_tokens, depth, parse_tree_f)
-                    print("Left parse_tokens:", parse_tokens)
-                    print("DONE")
             else:
+                epsilon = True
                 tokens_f.write(str(ScanTokenType.EOF).format(seq="$") + ' ')
                 dprint("End of compilation.")
                 if not _found_error:
                     lexical_errors_f.write("There is no lexical error.")
+                while epsilon:
+                    parse_tokens, depth, epsilon = parser.apply_rule(cur_seq, scan_token, parse_tokens, depth,
+                                                                     parse_tree_f)
                 break
         item_no = 1
         for sym in keywords_list:

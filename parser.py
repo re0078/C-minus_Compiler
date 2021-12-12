@@ -4,15 +4,19 @@ prediction_table = {}
 definite_table = {}
 
 
-def print_tree_row(info: str, depth: int, parse_tree_f, is_last: bool):
+def print_tree_row(info: str, depth: list, parse_tree_f, is_last: bool):
     row = ''
-    # if depth > 0:
-    #     for i in range(0, depth - 1):
-    #         row += '│   '
-    #     if is_last:
-    #         row += '└── '
-    #     else:
-    #         row += '├── '
+    cur_depth = depth[0]
+    if cur_depth > 0:
+        for i in range(0, cur_depth - 1):
+            if (i + 1) in depth:
+                row += '│   '
+            else:
+                row += '    '
+        if is_last:
+            row += '└── '
+        else:
+            row += '├── '
     row += info + '\n'
     parse_tree_f.write(row)
 
@@ -64,30 +68,33 @@ def build_prediction_table():
                 prediction_table[(rule.get_token(), ParseToken.EPSILON)] = (ParseToken.EPSILON,)
     for rule in ParseRule:
         build_prediction_for_rule(rule)
-    print("Hey")
 
 
-def apply_rule(seq: str, scan_token_type: ScanTokenType, parse_tokens: tuple, depth: int, parse_tree_f) -> (tuple, int,
-                                                                                                            bool):
+def apply_rule(seq: str, scan_token_type: ScanTokenType, parse_tokens: tuple, depth: list, parse_tree_f) -> (tuple, list
+                                                                                                             , bool):
     parse_token_equivalent = get_parse_token_for_seq(seq, scan_token_type)
     init_token: ParseToken
     init_token = parse_tokens[0]
+    is_last = (len(depth) == 1 or depth[0] != depth[1])
     if init_token.get_type() != ParseTokenType.NON_TERMINAL and init_token == parse_token_equivalent:
-        print_tree_row(str(scan_token_type).format(seq=seq), depth, parse_tree_f, True)
-        return parse_tokens[1:], depth, False
+        if parse_token_equivalent == ParseToken.DOLLAR:
+            print_tree_row(str(parse_token_equivalent).format(seq=seq), depth, parse_tree_f, is_last)
+        else:
+            print_tree_row(str(scan_token_type).format(seq=seq), depth, parse_tree_f, is_last)
+        return parse_tokens[1:], depth[1:], False
     else:
         pair = (init_token, parse_token_equivalent)
-        print_tree_row(str(init_token), depth, parse_tree_f, False)
+        print_tree_row(str(init_token), depth, parse_tree_f, is_last)
         if pair in prediction_table.keys():
             prods: tuple
             prods = prediction_table[pair]
             if prods[0] == ParseToken.EPSILON:
-                print_tree_row(str(ParseToken.EPSILON).format(seq=seq), depth + 1, parse_tree_f, True)
-                return parse_tokens[1:], depth, True
-            elif prods[0] != parse_token_equivalent:
-                return apply_rule(seq, scan_token_type, prods.__add__(parse_tokens[1:]), depth + 1, parse_tree_f)
+                depth[0] += 1
+                print_tree_row(str(ParseToken.EPSILON).format(seq=seq), depth, parse_tree_f, True)
+                return parse_tokens[1:], depth[1:], True
             else:
-                print_tree_row(str(scan_token_type).format(seq=seq), depth + 1, parse_tree_f, True)
-                return prods[1:].__add__(parse_tokens[1:]), depth, False
+                new_depth = [depth[0] + 1 for _ in prods]
+                return apply_rule(seq, scan_token_type, prods.__add__(parse_tokens[1:]), new_depth.__add__(depth[1:]),
+                                  parse_tree_f)
     # TODO panic-mode and skipping
     print(f"Error at {seq} and {init_token}")

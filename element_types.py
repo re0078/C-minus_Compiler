@@ -167,6 +167,8 @@ class ParseToken(Enum):
     def __str__(self):
         if self == ParseToken.EPSILON:
             return 'epsilon'
+        if self == ParseToken.DOLLAR:
+            return '$'
         str_name = (self.name[0] + self.name[1:].lower()).replace('_', '-')
         return str_name
 
@@ -291,3 +293,5 @@ def get_parse_token_for_seq(seq: str, scan_token: ScanTokenType) -> Optional[Par
         for token in ParseToken:
             if token.name.lower() == symbols_dict[seq]:
                 return token
+    elif scan_token == ScanTokenType.EOF:
+        return ParseToken.DOLLAR

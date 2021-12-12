@@ -8,10 +8,3 @@ int function(int a, int b, int c) {
                a == b;
           endif
 }
-
-int anotherfunction(int a, int b, int c) {
-      if ( a = b) { c = b = a;}
-      else
-               a == b;
-      endif
-}
