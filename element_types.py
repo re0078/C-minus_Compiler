@@ -1,4 +1,5 @@
 from enum import Enum
+from typing import Optional
 
 num_set = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9'}
 alphabet_set = {'A', 'a', 'B', 'b', 'C', 'c', 'D', 'd', 'E', 'e', 'F', 'f', 'G', 'g', 'H', 'h', 'I', 'i', 'J', 'j', 'K',
@@ -6,8 +7,12 @@ alphabet_set = {'A', 'a', 'B', 'b', 'C', 'c', 'D', 'd', 'E', 'e', 'F', 'f', 'G',
                 'V', 'v', 'W', 'w', 'X', 'x', 'Y', 'y', 'Z', 'z'}
 alphanumeric_set = alphabet_set.union(num_set)
 keywords_list = ['if', 'else', 'void', 'int', 'repeat', 'break', 'until', 'return', 'endif']
-asterisk_set = {'*'}
-symbols_set = {';', ':', ',', '[', ']', '(', ')', '{', '}', '+', '-', '<'}.union(asterisk_set)
+asterisk_dict = {'*': 'asterisk'}
+asterisk_set = {sym for sym in asterisk_dict.keys()}
+symbols_dict = {';': 'semicolon', ':': 'colon', ',': 'comma', '[': 'bracket_open', ']': 'bracket_close',
+                '(': 'parenthesis_open', ')': 'parenthesis_close', '{': 'brace_open', '}': 'brace_close', '+': 'plus',
+                '-': 'minus', '<': 'less'}
+symbols_set = {sym for sym in symbols_dict.keys()}
 equal_char_set = {'='}
 comment_set = {'/'}
 next_line_set = {'\n'}
@@ -69,6 +74,17 @@ class ParseTokenType(Enum):
     TERMINAL = 0,
     VARIABLE_TERMINAL = 1,
     NON_TERMINAL = 2,
+
+    def __repr__(self):
+        if self == ParseTokenType.TERMINAL:
+            return "T"
+        elif self == ParseTokenType.VARIABLE_TERMINAL:
+            return "V"
+        else:
+            return "N"
+
+    def __str__(self):
+        return self.name
 
 
 class ParseToken(Enum):
@@ -143,13 +159,26 @@ class ParseToken(Enum):
     DOLLAR = (68, ParseTokenType.TERMINAL),
     PARAM = (69, ParseTokenType.NON_TERMINAL),
     SIMPLE_EXPRESSION_PRIME = (70, ParseTokenType.NON_TERMINAL),
+    IS = (71, ParseTokenType.TERMINAL),
+
+    def get_type(self) -> ParseTokenType:
+        return self.value[0][1]
+
+    def __str__(self):
+        if self == ParseToken.EPSILON:
+            return 'epsilon'
+        str_name = (self.name[0] + self.name[1:].lower()).replace('_', '-')
+        return str_name
+
+    def __repr__(self):
+        return str(self)
 
 
 class ParseRule(Enum):
     R1 = (ParseToken.PROGRAM, ((ParseToken.DECLARATION_LIST, ParseToken.DOLLAR),)),
     R2 = (ParseToken.DECLARATION_LIST, ((ParseToken.DECLARATION, ParseToken.DECLARATION_LIST), (ParseToken.EPSILON,))),
-    R3 = (ParseToken.DECLARATION, ((ParseToken.DECLARATION_INITIAL,), (ParseToken.DECLARATION_PRIME,))),
-    R4 = (ParseToken.DECLARATION_INITIAL, ((ParseToken.TYPE_SPECIFIER,), (ParseToken.ID,))),
+    R3 = (ParseToken.DECLARATION, ((ParseToken.DECLARATION_INITIAL, ParseToken.DECLARATION_PRIME),)),
+    R4 = (ParseToken.DECLARATION_INITIAL, ((ParseToken.TYPE_SPECIFIER, ParseToken.ID),)),
     R5 = (ParseToken.DECLARATION_PRIME, ((ParseToken.FUN_DECLARATION_PRIME,), (ParseToken.VAR_DECLARATION_PRIME,))),
     R6 = (ParseToken.VAR_DECLARATION_PRIME, ((ParseToken.SEMICOLON,), (ParseToken.BRACKET_OPEN, ParseToken.NUM,
                                                                        ParseToken.BRACE_CLOSE, ParseToken.SEMICOLON))),
@@ -180,10 +209,10 @@ class ParseRule(Enum):
     R20 = (ParseToken.RETURN_STMT, ((ParseToken.RETURN, ParseToken.RETURN_STMT_PRIME),)),
     R21 = (ParseToken.RETURN_STMT_PRIME, ((ParseToken.SEMICOLON,), (ParseToken.EXPRESSION, ParseToken.SEMICOLON))),
     R22 = (ParseToken.EXPRESSION, ((ParseToken.SIMPLE_EXPRESSION_ZEGOND,), (ParseToken.ID, ParseToken.B),)),
-    R23 = (ParseToken.B, ((ParseToken.EXPRESSION,), (ParseToken.BRACKET_OPEN, ParseToken.EXPRESSION,
-                                                     ParseToken.BRACKET_CLOSE, ParseToken.H),
+    R23 = (ParseToken.B, ((ParseToken.IS, ParseToken.EXPRESSION), (ParseToken.BRACKET_OPEN, ParseToken.EXPRESSION,
+                                                                   ParseToken.BRACKET_CLOSE, ParseToken.H),
                           (ParseToken.SIMPLE_EXPRESSION_PRIME,))),
-    R24 = (ParseToken.H, ((ParseToken.EXPRESSION,), (ParseToken.G, ParseToken.D, ParseToken.C))),
+    R24 = (ParseToken.H, ((ParseToken.IS, ParseToken.EXPRESSION), (ParseToken.G, ParseToken.D, ParseToken.C))),
     R25 = (ParseToken.SIMPLE_EXPRESSION_ZEGOND, ((ParseToken.ADDITIVE_EXPRESSION_ZEGOND, ParseToken.C),)),
     R26 = (ParseToken.SIMPLE_EXPRESSION_PRIME, ((ParseToken.ADDITIVE_EXPRESSION_PRIME, ParseToken.C),)),
     R27 = (ParseToken.C, ((ParseToken.RELOP, ParseToken.ADDITIVE_EXPRESSION), (ParseToken.EPSILON,))),
@@ -212,13 +241,53 @@ class ParseRule(Enum):
     R45 = (ParseToken.ARG_LIST_PRIME, ((ParseToken.SEMICOLON, ParseToken.EXPRESSION, ParseToken.ARG_LIST_PRIME),
                                        (ParseToken.EPSILON,))),
 
-    def get_rules(self):
+    def get_prods(self) -> tuple:
         return self.value[0][1]
 
+    def get_token(self) -> ParseToken:
+        return self.value[0][0]
 
-def find_rule_by_token(token: ParseToken):
+    def __str__(self):
+        ret_str = f"{self.get_token().name} -> "
+        for prod in self.get_prods():
+            token: ParseToken
+            for token in prod:
+                if token.get_type() == ParseTokenType.NON_TERMINAL:
+                    ret_str += f"{token.name}"
+                else:
+                    ret_str += f"{token.name.lower()}"
+                ret_str += " "
+            ret_str += "| "
+        return ret_str[:-2]
+
+    def __repr__(self):
+        return self.__str__()
+
+
+def find_rule_by_token(token: ParseToken) -> Optional[ParseRule]:
     rule: ParseRule
     for rule in ParseRule:
         if rule.value[0][0] == token:
             return rule
     return None
+
+
+def get_parse_token_for_seq(seq: str, scan_token: ScanTokenType) -> Optional[ParseToken]:
+    token: ParseToken
+    if scan_token == ScanTokenType.KEYWORD:
+        for token in ParseToken:
+            if token.name.lower() == seq:
+                return token
+    elif scan_token == ScanTokenType.ID:
+        return ParseToken.ID
+    elif scan_token == ScanTokenType.NUM:
+        return ParseToken.NUM
+    elif scan_token == ScanTokenType.SYMBOL:
+        if seq[0] in equal_char_set:
+            if len(seq) == 1:
+                return ParseToken.IS
+            else:
+                return ParseToken.EQUALS
+        for token in ParseToken:
+            if token.name.lower() == symbols_dict[seq]:
+                return token
