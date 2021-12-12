@@ -1,4 +1,0 @@
-10.	(%, Invalid input)
-11.	(_, Invalid input)
-14.	(>, Invalid input)
-22.	(>, Invalid input)
