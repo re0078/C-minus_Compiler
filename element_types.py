@@ -11,7 +11,7 @@ asterisk_dict = {'*': 'asterisk'}
 asterisk_set = {sym for sym in asterisk_dict.keys()}
 symbols_dict = {';': 'semicolon', ':': 'colon', ',': 'comma', '[': 'bracket_open', ']': 'bracket_close',
                 '(': 'parenthesis_open', ')': 'parenthesis_close', '{': 'brace_open', '}': 'brace_close', '+': 'plus',
-                '-': 'minus', '<': 'less'}
+                '-': 'minus', '<': 'less', "*": "asterisk"}
 symbols_set = {sym for sym in symbols_dict.keys()}
 equal_char_set = {'='}
 comment_set = {'/'}
@@ -169,6 +169,8 @@ class ParseToken(Enum):
             return 'epsilon'
         if self == ParseToken.DOLLAR:
             return '$'
+        if self == ParseToken.ID:
+            return 'ID'
         str_name = (self.name[0] + self.name[1:].lower()).replace('_', '-')
         return str_name
 

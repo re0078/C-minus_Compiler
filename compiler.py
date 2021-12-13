@@ -1,8 +1,9 @@
+import math
+
+import parser
+import scanner
 from element_types import *
 from error_type import *
-import math
-import scanner
-import parser
 
 input_file_name = "input.txt"
 tokens_file_name = 'tokens.txt'
@@ -13,17 +14,18 @@ syntax_errors_file_name = "syntax_errors.txt"
 DEBUG = True
 _line_idx = 1
 _symbol_idx = 1
-_found_error = False
+_found_lexical_error = False
+_found_syntax_error = False
 
 
-def send_error(error: ErrorType, error_file, new_line: bool, cur_seq: str, remained_char: str):
-    global _line_idx, _found_error
+def send_error(error: ScanerErrorType, error_file, new_line: bool, cur_seq: str, remained_char: str):
+    global _line_idx, _found_lexical_error
     seq = cur_seq + remained_char
-    if error != ErrorType.UNCLOSED_COMMENT:
+    if error != ScanerErrorType.UNCLOSED_COMMENT:
         error.write_to_file(error_file, seq, _line_idx, new_line)
     else:
         error.write_to_file(error_file, seq[0:min(len(seq), 7)] + "...", _line_idx, new_line)
-    _found_error = True
+    _found_lexical_error = True
     scanner.flush()
 
 
@@ -35,8 +37,8 @@ def dprint(*string):  # debug print
 
 def run(input_fn: str, tokens_fn: str, lexical_errors_fn: str, symbols_fn: str, parse_tree_fn: str,
         syntax_errors_fn: str):
-    global DEBUG, _line_idx, _found_error, _symbol_idx
-    _found_error = False
+    global DEBUG, _line_idx, _found_lexical_error, _symbol_idx, _found_syntax_error
+    _found_lexical_error = False
     next_line_flag = True
     printing_started = False
     prev_err_line_idx = math.inf
@@ -84,16 +86,27 @@ def run(input_fn: str, tokens_fn: str, lexical_errors_fn: str, symbols_fn: str, 
                 epsilon = True
                 if scan_token not in (ScanTokenType.WHITESPACE, ScanTokenType.COMMENT):
                     while epsilon:
-                        parse_tokens, depth, epsilon = parser.apply_rule(cur_seq, scan_token, parse_tokens, depth, parse_tree_f)
+                        parse_tokens, depth, epsilon, error = parser.apply_rule(cur_seq, scan_token, parse_tokens,
+                                                                                depth,
+                                                                                parse_tree_f, syntax_errors_f,
+                                                                                _line_idx)
+                        if error:
+                            _found_syntax_error = True
+                        if parse_tokens is None:
+                            continue
             else:
                 epsilon = True
                 tokens_f.write(str(ScanTokenType.EOF).format(seq="$") + ' ')
                 dprint("End of compilation.")
-                if not _found_error:
+                if not _found_lexical_error:
                     lexical_errors_f.write("There is no lexical error.")
+                if not _found_syntax_error:
+                    syntax_errors_f.write("There is no syntax error.")
                 while epsilon:
-                    parse_tokens, depth, epsilon = parser.apply_rule(cur_seq, scan_token, parse_tokens, depth,
-                                                                     parse_tree_f)
+                    parse_tokens, depth, epsilon, error = parser.apply_rule(cur_seq, scan_token, parse_tokens, depth,
+                                                                            parse_tree_f, syntax_errors_f, _line_idx)
+                    if error:
+                        _found_syntax_error = True
                 break
         item_no = 1
         for sym in keywords_list:

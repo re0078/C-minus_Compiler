@@ -59,21 +59,21 @@ def scan_process(c: str, token_type: ScanTokenType) -> (bool, bool):
             return False, False
 
 
-def get_next_token(file) -> (bool, ScanTokenType, ErrorType, str, str):
+def get_next_token(file) -> (bool, ScanTokenType, ScanerErrorType, str, str):
     global _cur_seq, _remained_char, _token_type_determined
 
-    def look_ahead(file, is_asterisk: bool) -> (bool, ErrorType):
+    def look_ahead(file, is_asterisk: bool) -> (bool, ScanerErrorType):
         global _cur_seq, _remained_char
         look_ahead_c = file.read(1)
         if not look_ahead_c:
             return True, None
         if look_ahead_c not in valid_chars_set:
             _cur_seq += look_ahead_c
-            return False, ErrorType.INVALID_INPUT
+            return False, ScanerErrorType.INVALID_INPUT
         if is_asterisk:
             if look_ahead_c in comment_set:
                 _cur_seq += look_ahead_c
-                return False, ErrorType.UNMATCHED_COMMENT
+                return False, ScanerErrorType.UNMATCHED_COMMENT
             _remained_char = look_ahead_c
             return False, None
         else:
@@ -81,7 +81,7 @@ def get_next_token(file) -> (bool, ScanTokenType, ErrorType, str, str):
             if look_ahead_c in asterisk_set.union(comment_set):
                 return False, None
             if look_ahead_c in valid_chars_set:
-                return False, ErrorType.INVALID_INPUT
+                return False, ScanerErrorType.INVALID_INPUT
 
     def get_accepted_token(token_type):
         global _cur_seq
@@ -122,7 +122,7 @@ def get_next_token(file) -> (bool, ScanTokenType, ErrorType, str, str):
             if not c:
                 if accepted:
                     return get_accepted_token(token_type)
-                return True, ScanTokenType.ERROR, ErrorType.UNCLOSED_COMMENT, _cur_seq, _remained_char
+                return True, ScanTokenType.ERROR, ScanerErrorType.UNCLOSED_COMMENT, _cur_seq, _remained_char
             read, accepted = scan_process(c, token_type)
             _cur_seq += c
         if _token_type_determined:
@@ -131,6 +131,6 @@ def get_next_token(file) -> (bool, ScanTokenType, ErrorType, str, str):
                 return get_accepted_token(token_type)
             else:
                 if token_type is ScanTokenType.NUM:
-                    return False, ScanTokenType.ERROR, ErrorType.INVALID_NUMBER, _cur_seq, _remained_char
-                return False, ScanTokenType.ERROR, ErrorType.INVALID_INPUT, _cur_seq, _remained_char
-    return False, ScanTokenType.ERROR, ErrorType.INVALID_INPUT, _cur_seq, _remained_char
+                    return False, ScanTokenType.ERROR, ScanerErrorType.INVALID_NUMBER, _cur_seq, _remained_char
+                return False, ScanTokenType.ERROR, ScanerErrorType.INVALID_INPUT, _cur_seq, _remained_char
+    return False, ScanTokenType.ERROR, ScanerErrorType.INVALID_INPUT, _cur_seq, _remained_char

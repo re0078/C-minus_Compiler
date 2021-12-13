@@ -1,4 +1,7 @@
+# from compiler import send_parser_error
 from element_types import *
+from error_type import ParserErrorType
+from syncrhonizing import synchronizing_table as st
 
 prediction_table = {}
 definite_table = {}
@@ -70,8 +73,15 @@ def build_prediction_table():
         build_prediction_for_rule(rule)
 
 
-def apply_rule(seq: str, scan_token_type: ScanTokenType, parse_tokens: tuple, depth: list, parse_tree_f) -> (tuple, list
-                                                                                                             , bool):
+def send_parser_error(file, error_type: ParserErrorType, _line_idx: int, info: str):
+    error = f"#{_line_idx}  : syntax error, {error_type.value} {info}"
+    error += "\n"
+    file.write(error)
+
+
+def apply_rule(seq: str, scan_token_type: ScanTokenType, parse_tokens: tuple, depth: list, parse_tree_f,
+               syntax_error_f, _line_idx) -> (tuple, list
+                                              , bool):
     parse_token_equivalent = get_parse_token_for_seq(seq, scan_token_type)
     init_token: ParseToken
     init_token = parse_tokens[0]
@@ -81,7 +91,7 @@ def apply_rule(seq: str, scan_token_type: ScanTokenType, parse_tokens: tuple, de
             print_tree_row(str(parse_token_equivalent).format(seq=seq), depth, parse_tree_f, is_last)
         else:
             print_tree_row(str(scan_token_type).format(seq=seq), depth, parse_tree_f, is_last)
-        return parse_tokens[1:], depth[1:], False
+        return parse_tokens[1:], depth[1:], False, False
     else:
         pair = (init_token, parse_token_equivalent)
         print_tree_row(str(init_token), depth, parse_tree_f, is_last)
@@ -91,10 +101,30 @@ def apply_rule(seq: str, scan_token_type: ScanTokenType, parse_tokens: tuple, de
             if prods[0] == ParseToken.EPSILON:
                 depth[0] += 1
                 print_tree_row(str(ParseToken.EPSILON).format(seq=seq), depth, parse_tree_f, True)
-                return parse_tokens[1:], depth[1:], True
+                return parse_tokens[1:], depth[1:], True, False
             else:
                 new_depth = [depth[0] + 1 for _ in prods]
                 return apply_rule(seq, scan_token_type, prods.__add__(parse_tokens[1:]), new_depth.__add__(depth[1:]),
-                                  parse_tree_f)
+                                  parse_tree_f, syntax_error_f, _line_idx)
+        else:
+            if (pair[0].get_type() != ParseTokenType.NON_TERMINAL) or (pair[1] in st[pair[0]]):
+                if pair[0].get_type() == ParseTokenType.NON_TERMINAL:
+                    info = str(init_token)
+                else:
+                    if scan_token_type in {ScanTokenType.ID, ScanTokenType.NUM}:
+                        info = scan_token_type.name
+                    else:
+                        info = seq
+                send_parser_error(syntax_error_f, ParserErrorType.MISSING, _line_idx, info)
+                res = apply_rule(seq, scan_token_type, parse_tokens[1:], depth,
+                                 parse_tree_f, syntax_error_f, _line_idx)
+                return res[:3] + (True,)
+            else:
+                # info = str(parse_token_equivalent)
+                info = str(parse_token_equivalent).format(seq=seq)
+                send_parser_error(syntax_error_f, ParserErrorType.ILLEGAL, _line_idx,
+                                  info)
+                return parse_tokens, depth, False, True
+
     # TODO panic-mode and skipping
-    print(f"Error at {seq} and {init_token}")
+    # print(f"Error at {seq} and {init_token}")
