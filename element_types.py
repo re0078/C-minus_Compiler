@@ -187,7 +187,7 @@ class ParseRule(Enum):
     R4 = (ParseToken.DECLARATION_INITIAL, ((ParseToken.TYPE_SPECIFIER, ParseToken.ID),)),
     R5 = (ParseToken.DECLARATION_PRIME, ((ParseToken.FUN_DECLARATION_PRIME,), (ParseToken.VAR_DECLARATION_PRIME,))),
     R6 = (ParseToken.VAR_DECLARATION_PRIME, ((ParseToken.SEMICOLON,), (ParseToken.BRACKET_OPEN, ParseToken.NUM,
-                                                                       ParseToken.BRACE_CLOSE, ParseToken.SEMICOLON))),
+                                                                       ParseToken.BRACKET_CLOSE, ParseToken.SEMICOLON))),
     R7 = (ParseToken.FUN_DECLARATION_PRIME, ((ParseToken.PARENTHESIS_OPEN, ParseToken.PARAMS,
                                               ParseToken.PARENTHESIS_CLOSE, ParseToken.COMPOUND_STMT),)),
     R8 = (ParseToken.TYPE_SPECIFIER, ((ParseToken.INT,), (ParseToken.VOID,))),
