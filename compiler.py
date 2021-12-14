@@ -89,10 +89,14 @@ def run(input_fn: str, tokens_fn: str, lexical_errors_fn: str, symbols_fn: str, 
                         parse_tokens, depth, tree_entries, epsilon, error = parser.apply_rule(
                             cur_seq, scan_token, parse_tokens, depth, parse_tree_f, syntax_errors_f, _line_idx,
                             tree_entries)
+                        if len(parse_tokens) == 0:
+                            break
                         if error:
                             _found_syntax_error = True
                         if parse_tokens is None:
                             continue
+                    if len(parse_tokens) == 0:
+                        break
             else:
                 # Scanner
                 tokens_f.write(str(ScanTokenType.EOF).format(seq="$") + ' ')
@@ -109,8 +113,8 @@ def run(input_fn: str, tokens_fn: str, lexical_errors_fn: str, symbols_fn: str, 
                         tree_entries)
                     if error:
                         _found_syntax_error = True
+                tree_entries.append(('', 0))
                 break
-        tree_entries.append(('', 0))
         parser.print_tree(tree_entries, parse_tree_f)
         item_no = 1
         for sym in keywords_list:

@@ -109,36 +109,16 @@ def apply_rule(seq: str, scan_token_type: ScanTokenType, parse_tokens: tuple, de
     parse_token_equivalent = get_parse_token_for_seq(seq, scan_token_type)
     init_token: ParseToken
     init_token = parse_tokens[0]
-    # is_last = (len(depth) == 1 or depth[0] != depth[1])
     if init_token.get_type() != ParseTokenType.NON_TERMINAL and init_token == parse_token_equivalent:
         if parse_token_equivalent == ParseToken.DOLLAR:
             tree_entries.append((str(parse_token_equivalent).format(seq=seq), depth[0]))
-            # print_tree_row(str(parse_token_equivalent).format(seq=seq), depth, parse_tree_f, is_last, True)
         else:
-            # cur_depth = depth[0]
-            # for entry_depth in previous_tree_entries:
-            #     if entry_depth == cur_depth:
-            #         entry = previous_tree_entries[entry_depth]
-            #         for i in range(0, len(entry)):
-            #             print_tree_row(entry[i], entry_depth, parse_tree_f, False, False)
-            #     elif entry_depth < cur_depth:
-            #         entry = previous_tree_entries[entry_depth]
-            #         for i in range(0, len(entry)):
-            #             print_tree_row(entry[i], entry_depth, parse_tree_f, i == len(entry) - 1, False)
-            #     else:
-            #         continue
-            #     del previous_tree_entries[entry_depth]
-            # if cur_depth not in previous_tree_entries.keys():
-            #     previous_tree_entries[cur_depth] = []
-            # previous_tree_entries[cur_depth].append(str(scan_token_type).format(seq=seq))
             tree_entries.append((str(scan_token_type).format(seq=seq), depth[0]))
-            # print_tree_row(str(scan_token_type).format(seq=seq), depth, parse_tree_f, is_last, False)
         return parse_tokens[1:], depth[1:], tree_entries, False, False
     else:
         pair = (init_token, parse_token_equivalent)
         if pair in parse_table.keys():
             tree_entries.append((str(init_token), depth[0]))
-            # print_tree_row(str(init_token), depth, parse_tree_f, is_last, False)
             prods: tuple
             prods = parse_table[pair]
             new_depth = [depth[0] + 1 for _ in prods]
@@ -146,12 +126,9 @@ def apply_rule(seq: str, scan_token_type: ScanTokenType, parse_tokens: tuple, de
                               parse_tree_f, syntax_error_f, _line_idx, tree_entries)
         elif pair[0] in epsilon_set and pair[1] in st[pair[0]]:
             tree_entries.append((str(init_token), depth[0]))
-            # print_tree_row(str(init_token), depth, parse_tree_f, is_last, False)
             prods = epsilon_set[init_token]
             if len(prods) == 0:
                 tree_entries.append((str(ParseToken.EPSILON).format(seq=seq), depth[0] + 1))
-                # print_tree_row(str(ParseToken.EPSILON).format(seq=seq), [depth[0] + 1] + depth[1:], parse_tree_f, True,
-                #                False)
             new_depth = [depth[0] + 1 for _ in prods]
             return prods + parse_tokens[1:], new_depth.__add__(depth[1:]), tree_entries, True, False
         else:
@@ -187,6 +164,3 @@ def apply_rule(seq: str, scan_token_type: ScanTokenType, parse_tokens: tuple, de
                 send_parser_error(syntax_error_f, error_type, line_idx,
                                   info)
                 return parse_tokens, depth, tree_entries, False, True
-
-    # TODO panic-mode and skipping
-    # print(f"Error at {seq} and {init_token}")
