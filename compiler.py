@@ -47,7 +47,7 @@ def run(input_fn: str, tokens_fn: str, lexical_errors_fn: str, symbols_fn: str, 
             open(syntax_errors_fn, 'w') as syntax_errors_f:
         ids_table = list()
         parser.build_prediction_table()
-        parse_tokens, depth = (ParseRule.R1.get_token(),), [0]
+        parse_tokens, depth, tree_entries = (ParseRule.R1.get_token(),), [0], []
         while True:
             eof, scan_token, error, cur_seq, remained_char = scanner.get_next_token(input_f)
             if scan_token is ScanTokenType.ERROR:
@@ -86,28 +86,32 @@ def run(input_fn: str, tokens_fn: str, lexical_errors_fn: str, symbols_fn: str, 
                 epsilon = True
                 if scan_token not in (ScanTokenType.WHITESPACE, ScanTokenType.COMMENT):
                     while epsilon:
-                        parse_tokens, depth, epsilon, error = parser.apply_rule(cur_seq, scan_token, parse_tokens,
-                                                                                depth,
-                                                                                parse_tree_f, syntax_errors_f,
-                                                                                _line_idx)
+                        parse_tokens, depth, tree_entries, epsilon, error = parser.apply_rule(
+                            cur_seq, scan_token, parse_tokens, depth, parse_tree_f, syntax_errors_f, _line_idx,
+                            tree_entries)
                         if error:
                             _found_syntax_error = True
                         if parse_tokens is None:
                             continue
             else:
-                epsilon = True
+                # Scanner
                 tokens_f.write(str(ScanTokenType.EOF).format(seq="$") + ' ')
                 dprint("End of compilation.")
                 if not _found_lexical_error:
                     lexical_errors_f.write("There is no lexical error.")
                 if not _found_syntax_error:
                     syntax_errors_f.write("There is no syntax error.")
+                # Parser
+                epsilon = True
                 while epsilon:
-                    parse_tokens, depth, epsilon, error = parser.apply_rule(cur_seq, scan_token, parse_tokens, depth,
-                                                                            parse_tree_f, syntax_errors_f, _line_idx)
+                    parse_tokens, depth, tree_entries, epsilon, error = parser.apply_rule(
+                        cur_seq, scan_token, parse_tokens, depth, parse_tree_f, syntax_errors_f, _line_idx,
+                        tree_entries)
                     if error:
                         _found_syntax_error = True
                 break
+        tree_entries.append(('', 0))
+        parser.print_tree(tree_entries, parse_tree_f)
         item_no = 1
         for sym in keywords_list:
             symbols_f.write(f"{item_no}.\t{sym}\n")
