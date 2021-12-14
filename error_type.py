@@ -17,3 +17,4 @@ class ScanerErrorType(Enum):
 class ParserErrorType(Enum):
     MISSING = "missing"
     ILLEGAL = "illegal"
+    UNEXPECTED = "Unexpected"

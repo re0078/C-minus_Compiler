@@ -1,13 +1,14 @@
 # from compiler import send_parser_error
 from element_types import *
 from error_type import ParserErrorType
+from parse_util import parse_table, epsilon_set, symbol_str_map
 from syncrhonizing import synchronizing_table as st
 
 prediction_table = {}
 definite_table = {}
 
 
-def print_tree_row(info: str, depth: list, parse_tree_f, is_last: bool):
+def print_tree_row(info: str, depth: list, parse_tree_f, is_last: bool, is_dollar: bool):
     row = ''
     cur_depth = depth[0]
     if cur_depth > 0:
@@ -20,7 +21,8 @@ def print_tree_row(info: str, depth: list, parse_tree_f, is_last: bool):
             row += '└── '
         else:
             row += '├── '
-    row += info + '\n'
+
+    row += info + ('\n' if not is_dollar else '')
     parse_tree_f.write(row)
 
 
@@ -73,9 +75,14 @@ def build_prediction_table():
         build_prediction_for_rule(rule)
 
 
+error_found = False
+
+
 def send_parser_error(file, error_type: ParserErrorType, _line_idx: int, info: str):
-    error = f"#{_line_idx}  : syntax error, {error_type.value} {info}"
-    error += "\n"
+    global error_found
+    error = "\n" if error_found else ""
+    error_found = True
+    error += f"#{_line_idx} : syntax error, {error_type.value} {info}"
     file.write(error)
 
 
@@ -88,24 +95,27 @@ def apply_rule(seq: str, scan_token_type: ScanTokenType, parse_tokens: tuple, de
     is_last = (len(depth) == 1 or depth[0] != depth[1])
     if init_token.get_type() != ParseTokenType.NON_TERMINAL and init_token == parse_token_equivalent:
         if parse_token_equivalent == ParseToken.DOLLAR:
-            print_tree_row(str(parse_token_equivalent).format(seq=seq), depth, parse_tree_f, is_last)
+            print_tree_row(str(parse_token_equivalent).format(seq=seq), depth, parse_tree_f, is_last, True)
         else:
-            print_tree_row(str(scan_token_type).format(seq=seq), depth, parse_tree_f, is_last)
+            print_tree_row(str(scan_token_type).format(seq=seq), depth, parse_tree_f, is_last, False)
         return parse_tokens[1:], depth[1:], False, False
     else:
         pair = (init_token, parse_token_equivalent)
-        print_tree_row(str(init_token), depth, parse_tree_f, is_last)
-        if pair in prediction_table.keys():
+        if pair in parse_table.keys():
+            print_tree_row(str(init_token), depth, parse_tree_f, is_last, False)
             prods: tuple
-            prods = prediction_table[pair]
-            if prods[0] == ParseToken.EPSILON:
-                depth[0] += 1
-                print_tree_row(str(ParseToken.EPSILON).format(seq=seq), depth, parse_tree_f, True)
-                return parse_tokens[1:], depth[1:], True, False
-            else:
-                new_depth = [depth[0] + 1 for _ in prods]
-                return apply_rule(seq, scan_token_type, prods.__add__(parse_tokens[1:]), new_depth.__add__(depth[1:]),
-                                  parse_tree_f, syntax_error_f, _line_idx)
+            prods = parse_table[pair]
+            new_depth = [depth[0] + 1 for _ in prods]
+            return apply_rule(seq, scan_token_type, prods.__add__(parse_tokens[1:]), new_depth.__add__(depth[1:]),
+                              parse_tree_f, syntax_error_f, _line_idx)
+        elif pair[0] in epsilon_set and pair[1] in st[pair[0]]:
+            print_tree_row(str(init_token), depth, parse_tree_f, is_last, False)
+            prods = epsilon_set[init_token]
+            if len(prods) == 0:
+                print_tree_row(str(ParseToken.EPSILON).format(seq=seq), [depth[0] + 1] + depth[1:], parse_tree_f, True,
+                               False)
+            new_depth = [depth[0] + 1 for _ in prods]
+            return prods + parse_tokens[1:], new_depth.__add__(depth[1:]), True, False
         else:
             if (pair[0].get_type() != ParseTokenType.NON_TERMINAL) or (pair[1] in st[pair[0]]):
                 if pair[0].get_type() == ParseTokenType.NON_TERMINAL:
@@ -113,16 +123,30 @@ def apply_rule(seq: str, scan_token_type: ScanTokenType, parse_tokens: tuple, de
                 else:
                     if scan_token_type in {ScanTokenType.ID, ScanTokenType.NUM}:
                         info = scan_token_type.name
+                    elif init_token in {ParseToken.IF, ParseToken.ENDIF, ParseToken.ELSE, ParseToken.BREAK,
+                                        ParseToken.REPEAT, ParseToken.RETURN, ParseToken.UNTIL}:
+                        info = init_token.name.lower()
+                    elif init_token in symbol_str_map:
+                        info = symbol_str_map[init_token]
                     else:
-                        info = seq
+                        info = str(init_token)
                 send_parser_error(syntax_error_f, ParserErrorType.MISSING, _line_idx, info)
-                res = apply_rule(seq, scan_token_type, parse_tokens[1:], depth,
-                                 parse_tree_f, syntax_error_f, _line_idx)
-                return res[:3] + (True,)
+                depth[0] += 1
+                return parse_tokens[1:], depth[1:], True, True
             else:
-                # info = str(parse_token_equivalent)
-                info = str(parse_token_equivalent).format(seq=seq)
-                send_parser_error(syntax_error_f, ParserErrorType.ILLEGAL, _line_idx,
+                line_idx = _line_idx
+                error_type = ParserErrorType.ILLEGAL
+                if scan_token_type is ScanTokenType.SYMBOL:
+                    info = seq
+                elif parse_token_equivalent is ParseToken.INT:
+                    info = "int"
+                elif scan_token_type is ScanTokenType.EOF:
+                    info = "EOF"
+                    line_idx += 1
+                    error_type = ParserErrorType.UNEXPECTED
+                else:
+                    info = str(parse_token_equivalent)
+                send_parser_error(syntax_error_f, error_type, line_idx,
                                   info)
                 return parse_tokens, depth, False, True
 

@@ -171,6 +171,8 @@ class ParseToken(Enum):
             return '$'
         if self == ParseToken.ID:
             return 'ID'
+        if self == ParseToken.NUM:
+            return 'NUM'
         str_name = (self.name[0] + self.name[1:].lower()).replace('_', '-')
         return str_name
 
@@ -236,13 +238,13 @@ class ParseRule(Enum):
                                        (ParseToken.VAR_PRIME,))),
     R40 = (ParseToken.VAR_PRIME, ((ParseToken.BRACE_OPEN, ParseToken.EXPRESSION, ParseToken.BRACKET_CLOSE),
                                   (ParseToken.EPSILON,))),
-    R41 = (ParseToken.FACTOR_PRIME, ((ParseToken.PARENTHESIS_OPEN, ParseToken.EXPRESSION, ParseToken.PARENTHESIS_CLOSE),
+    R41 = (ParseToken.FACTOR_PRIME, ((ParseToken.PARENTHESIS_OPEN, ParseToken.ARGS, ParseToken.PARENTHESIS_CLOSE),
                                      (ParseToken.EPSILON,))),
-    R42 = (ParseToken.FACTOR_ZEGOND, ((ParseToken.PARENTHESIS_OPEN, ParseToken.ARGS, ParseToken.PARENTHESIS_CLOSE),
-                                      (ParseToken.EPSILON,))),
+    R42 = (ParseToken.FACTOR_ZEGOND, ((ParseToken.PARENTHESIS_OPEN, ParseToken.EXPRESSION, ParseToken.PARENTHESIS_CLOSE),
+                                      (ParseToken.NUM,))),
     R43 = (ParseToken.ARGS, ((ParseToken.ARG_LIST,), (ParseToken.EPSILON,),)),
     R44 = (ParseToken.ARG_LIST, ((ParseToken.EXPRESSION, ParseToken.ARG_LIST_PRIME),)),
-    R45 = (ParseToken.ARG_LIST_PRIME, ((ParseToken.SEMICOLON, ParseToken.EXPRESSION, ParseToken.ARG_LIST_PRIME),
+    R45 = (ParseToken.ARG_LIST_PRIME, ((ParseToken.COMMA, ParseToken.EXPRESSION, ParseToken.ARG_LIST_PRIME),
                                        (ParseToken.EPSILON,))),
 
     def get_prods(self) -> tuple:
