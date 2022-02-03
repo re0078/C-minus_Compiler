@@ -1,26 +1,12 @@
-void sth( void ) {
-	void sthelse ( void ) { }
-	void sthelse2 ( void )  { } ;
-}
-void sthelse3 ( void ) { } ;
-void main ( void ) {
-	if ( 2 == 2 ) { } else {
-	int a = 2 ;
-	int b;
-	int p;
-	int q,r,s,t;
-	p ( ) ;
-	function ( ) ;
-	= ; * ; == ; + ; - ;
-	+ = - * ==
-	;
-	;;;
-	} endif;
-	if ( 2 == 2) {
-		int func ( int o ) { }
-	} else {
-		int func ( int r ) { }
-	} endif int pq ;
-	/*
-	if ( 2 == 2 ) { } else { } endif;
+/*sample 3*/
+void main (void) {
+int a;
+int b;
+ b = 1;
+ a = 2;
+	repeat {
+		b = b + 1 + 2 * 2;
+		a = a * 2;
+	} until (20 < b)
+	return;
 }
