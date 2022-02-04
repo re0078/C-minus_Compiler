@@ -182,6 +182,35 @@ def construct_sem_sym_table_and_scope_stack(seq, current_token):
             _new_param_type = None
 
 
+_brace_list = []
+_new_repeat = False
+_new_if = False
+_new_else = False
+
+
+def construct_brace_tracking_stack(current_token):
+    global _new_repeat, _new_if, _new_else, _brace_list
+    if current_token is ParseToken.BRACE_OPEN:
+        if _brace_func_list[-1]:
+            _brace_list.append((BraceElementType.FUNCTION, codegen.get_pb_idx()))
+        if _new_repeat:
+            _brace_list.append((BraceElementType.REPEAT, codegen.get_pb_idx()))
+            _new_repeat = False
+        if _new_if:
+            _brace_list.append((BraceElementType.IF, codegen.get_pb_idx()))
+            _new_if = False
+        if _new_else:
+            _brace_list.append((BraceElementType.ELSE, codegen.get_pb_idx()))
+            _new_else = False
+    elif current_token is ParseToken.BRACE_CLOSE:
+        _brace_list = _brace_list[:-1]
+    elif current_token is ParseToken.REPEAT:
+        _new_repeat = True
+    elif current_token is ParseToken.IF:
+        _new_if = True
+    elif current_token is ParseToken.ELSE:
+        _new_else = True
+
 
 def apply_rule(seq: str, scan_token_type: ScanTokenType, parse_tokens: list, depth: list, parse_tree_f,
                syntax_error_f, _line_idx, tree_entries: list) -> (list, list, bool, bool):

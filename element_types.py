@@ -193,6 +193,13 @@ class SymbolStackElementType(Enum):
     UNKNOWN = 6
 
 
+class BraceElementType(Enum):
+    FUNCTION = 0
+    REPEAT = 1
+    IF = 2
+    ELSE = 3
+
+
 class ActionSymbol(Enum):
     ADD = 1,
     MULT = 2,
