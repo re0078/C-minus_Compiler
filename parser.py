@@ -9,6 +9,8 @@ prediction_table = {}
 definite_table = {}
 _declaration_flag = False
 _array_flag = False
+_assign_offset = 1
+_return_val_address = -1
 
 
 def print_tree_row(info: str, depth: list, index: int, parse_tree_f, is_last: bool, is_dollar: bool):
@@ -67,31 +69,46 @@ def send_parser_error(file, error_type: ParserErrorType, _line_idx: int, info: s
     file.write(error)
 
 
-def semantic_check(seq: str):
-    global _declaration_flag, _array_flag
-    if seq == str(ParseToken.INT).lower():
+def semantic_check(parse_token: ParseToken):
+    global _declaration_flag, _array_flag, _assign_offset
+    if parse_token == ParseToken.TYPE_SPECIFIER:
         _declaration_flag = True
-    if seq == '[':
+    if parse_token == ParseToken.BRACKET_OPEN:
         _array_flag = True
+
+
+def check_num_id_for_ss(current_parse_token: ParseToken, seq: str, next_parse_token: ParseToken):
+    global _return_val_address
+    if current_parse_token == ParseToken.ID:
+        _return_val_address = codegen.get_addr(seq)
+        codegen.push(_return_val_address)
+    if current_parse_token == ParseToken.NUM:
+        codegen.push('#' + seq)
+    if current_parse_token == ParseToken.VAR_DECLARATION_PRIME:
+        _return_val_address = -1
+
+
+def handle_action_symbol(action):
+    global _declaration_flag, _array_flag, _assign_offset
+    codegen.general_routine(action, (_declaration_flag, _assign_offset))
+    if _declaration_flag:
+        _declaration_flag = False
+    if _array_flag:
+        _array_flag = False
+        _assign_offset = 1
 
 
 def apply_rule(seq: str, scan_token_type: ScanTokenType, parse_tokens: list, depth: list, parse_tree_f,
                syntax_error_f, _line_idx, tree_entries: list) -> (list, list, bool, bool):
-    global _declaration_flag
     parse_token_equivalent = get_parse_token_for_seq(seq, scan_token_type)
     init_token: ParseToken
     init_token = parse_tokens[0]
     if type(init_token) == ActionSymbol:
-        init_token: ActionSymbol
-        codegen.general_routine(init_token, (_declaration_flag, _array_flag))
-        if _declaration_flag:
-            _declaration_flag = False
+        handle_action_symbol(init_token)
         return parse_tokens[1:], depth[1:], tree_entries, True, False
-    semantic_check(seq)
-    if scan_token_type == ScanTokenType.ID:
-        codegen.push(codegen.get_addr(seq))
-    elif scan_token_type == ScanTokenType.NUM:
-        codegen.push('#' + seq)
+    semantic_check(init_token)
+    if len(parse_tokens) > 1:
+        check_num_id_for_ss(init_token, seq, parse_tokens[1])
     if init_token.get_type() != ParseTokenType.NON_TERMINAL and init_token == parse_token_equivalent:
         if parse_token_equivalent == ParseToken.DOLLAR:
             tree_entries.append((str(parse_token_equivalent).format(seq=seq), depth[0]))
