@@ -3,9 +3,12 @@ from element_types import *
 from error_type import ParserErrorType
 from parse_util import parse_table, epsilon_set, symbol_str_map
 from syncrhonizing import synchronizing_table as st
+import codegen
 
 prediction_table = {}
 definite_table = {}
+_declaration_flag = False
+_array_flag = False
 
 
 def print_tree_row(info: str, depth: list, index: int, parse_tree_f, is_last: bool, is_dollar: bool):
@@ -64,11 +67,31 @@ def send_parser_error(file, error_type: ParserErrorType, _line_idx: int, info: s
     file.write(error)
 
 
+def semantic_check(seq: str):
+    global _declaration_flag, _array_flag
+    if seq == str(ParseToken.INT).lower():
+        _declaration_flag = True
+    if seq == '[':
+        _array_flag = True
+
+
 def apply_rule(seq: str, scan_token_type: ScanTokenType, parse_tokens: list, depth: list, parse_tree_f,
                syntax_error_f, _line_idx, tree_entries: list) -> (list, list, bool, bool):
+    global _declaration_flag
     parse_token_equivalent = get_parse_token_for_seq(seq, scan_token_type)
     init_token: ParseToken
     init_token = parse_tokens[0]
+    if type(init_token) == ActionSymbol:
+        init_token: ActionSymbol
+        codegen.general_routine(init_token, (_declaration_flag, _array_flag))
+        if _declaration_flag:
+            _declaration_flag = False
+        return parse_tokens[1:], depth[1:], tree_entries, True, False
+    semantic_check(seq)
+    if scan_token_type == ScanTokenType.ID:
+        codegen.push(codegen.get_addr(seq))
+    elif scan_token_type == ScanTokenType.NUM:
+        codegen.push('#' + seq)
     if init_token.get_type() != ParseTokenType.NON_TERMINAL and init_token == parse_token_equivalent:
         if parse_token_equivalent == ParseToken.DOLLAR:
             tree_entries.append((str(parse_token_equivalent).format(seq=seq), depth[0]))

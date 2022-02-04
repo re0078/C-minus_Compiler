@@ -23,6 +23,7 @@ valid_chars_set = alphanumeric_set.union(symbols_set).union(equal_char_set) \
 other_chars = set("!@#$%^&_}{?>|':;,.").union(set('"'))
 _VARS_OFFSET = 100
 _TEMP_OFFSET = 500
+_OFFSET_COE = 4
 
 
 class ScanState:
@@ -161,7 +162,7 @@ class ParseToken(Enum):
     DOLLAR = (68, ParseTokenType.TERMINAL),
     PARAM = (69, ParseTokenType.NON_TERMINAL),
     SIMPLE_EXPRESSION_PRIME = (70, ParseTokenType.NON_TERMINAL),
-    IS = (71, ParseTokenType.TERMINAL),
+    IS = (71, ParseTokenType.TERMINAL)
 
     def get_type(self) -> ParseTokenType:
         return self.value[0][1]
@@ -196,19 +197,23 @@ class ActionSymbol(Enum):
     def __str__(self):
         return self.name
 
+    def __repr__(self):
+        return str(self)
+
 
 class ParseRule(Enum):
     R1 = [ParseToken.PROGRAM, [[ParseToken.DECLARATION_LIST, ParseToken.DOLLAR], ]],
     R2 = [ParseToken.DECLARATION_LIST, [[ParseToken.DECLARATION, ParseToken.DECLARATION_LIST], [ParseToken.EPSILON, ]]],
     R3 = [ParseToken.DECLARATION, [[ParseToken.DECLARATION_INITIAL, ParseToken.DECLARATION_PRIME], ]],
-    R4 = [ParseToken.DECLARATION_INITIAL, [[ParseToken.TYPE_SPECIFIER, ParseToken.ID], ]],
+    R4 = [ParseToken.DECLARATION_INITIAL, [[ParseToken.INT, ParseToken.ID, ActionSymbol.ASSIGN], ],
+          [ParseToken.VOID, ParseToken.ID]],
     R5 = [ParseToken.DECLARATION_PRIME, [[ParseToken.FUN_DECLARATION_PRIME, ], [ParseToken.VAR_DECLARATION_PRIME, ]]],
     R6 = [ParseToken.VAR_DECLARATION_PRIME, [[ParseToken.SEMICOLON, ], [ParseToken.BRACKET_OPEN, ParseToken.NUM,
                                                                         ParseToken.BRACKET_CLOSE,
                                                                         ParseToken.SEMICOLON]]],
     R7 = [ParseToken.FUN_DECLARATION_PRIME, [[ParseToken.PARENTHESIS_OPEN, ParseToken.PARAMS,
                                               ParseToken.PARENTHESIS_CLOSE, ParseToken.COMPOUND_STMT], ]],
-    R8 = [ParseToken.TYPE_SPECIFIER, [[ParseToken.INT, ], [ParseToken.VOID, ]]],
+    # R8 = [ParseToken.TYPE_SPECIFIER, [[ParseToken.INT, ], [ParseToken.VOID, ]]],
     R9 = [ParseToken.PARAMS, [[ParseToken.INT, ParseToken.ID, ParseToken.PARAM_PRIME, ParseToken.PARAM_LIST],
                               [ParseToken.VOID, ]]],
     R10 = [ParseToken.PARAM_LIST,
@@ -234,7 +239,8 @@ class ParseRule(Enum):
                                         ParseToken.UNTIL, ParseToken.PARENTHESIS_OPEN, ParseToken.EXPRESSION,
                                         ParseToken.PARENTHESIS_CLOSE, ActionSymbol.JPF, ActionSymbol.JP], ]],
     R20 = [ParseToken.RETURN_STMT, [[ParseToken.RETURN, ParseToken.RETURN_STMT_PRIME, ActionSymbol.JP], ]],
-    R21 = [ParseToken.RETURN_STMT_PRIME, [[ParseToken.SEMICOLON, ], [ParseToken.EXPRESSION, ParseToken.SEMICOLON]]],
+    R21 = [ParseToken.RETURN_STMT_PRIME, [[ParseToken.SEMICOLON, ], [ParseToken.EXPRESSION, ParseToken.SEMICOLON,
+                                                                     ActionSymbol.ASSIGN]]],
     R22 = [ParseToken.EXPRESSION, [[ParseToken.SIMPLE_EXPRESSION_ZEGOND, ], [ParseToken.ID, ParseToken.B], ]],
     R23 = [ParseToken.B, [[ParseToken.IS, ParseToken.EXPRESSION], [ParseToken.BRACKET_OPEN, ParseToken.EXPRESSION,
                                                                    ParseToken.BRACKET_CLOSE, ParseToken.H],
@@ -265,14 +271,14 @@ class ParseRule(Enum):
                                   [ParseToken.EPSILON, ]]],
     R41 = [ParseToken.FACTOR_PRIME, [[ParseToken.PARENTHESIS_OPEN, ParseToken.ARGS, ParseToken.PARENTHESIS_CLOSE],
                                      [ParseToken.EPSILON, ]]],
-    R42 = [
-              ParseToken.FACTOR_ZEGOND,
-              [[ParseToken.PARENTHESIS_OPEN, ParseToken.EXPRESSION, ParseToken.PARENTHESIS_CLOSE],
-               [ParseToken.NUM, ]]],
+    R42 = [ParseToken.FACTOR_ZEGOND, [[ParseToken.PARENTHESIS_OPEN, ParseToken.EXPRESSION,
+                                       ParseToken.PARENTHESIS_CLOSE], [ParseToken.NUM, ]]],
     R43 = [ParseToken.ARGS, [[ParseToken.ARG_LIST, ], [ParseToken.EPSILON, ], ]],
     R44 = [ParseToken.ARG_LIST, [[ParseToken.EXPRESSION, ParseToken.ARG_LIST_PRIME], ]],
     R45 = [ParseToken.ARG_LIST_PRIME, [[ParseToken.COMMA, ParseToken.EXPRESSION, ParseToken.ARG_LIST_PRIME],
                                        [ParseToken.EPSILON, ]]],
+
+    # R46 = [ParseToken.OUTPUT_STMT, [ParseToken.OUTPUT, ParseToken.PARENTHESIS_OPEN, ]]
 
     def get_prods(self) -> tuple:
         return self.value[0][1]

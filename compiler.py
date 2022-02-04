@@ -46,7 +46,7 @@ def run(input_fn: str, tokens_fn: str, lexical_errors_fn: str, symbols_fn: str, 
             lexical_errors_f, open(symbols_fn, 'w') as symbols_f, open(parse_tree_fn, 'w') as parse_tree_f, \
             open(syntax_errors_fn, 'w') as syntax_errors_f:
         ids_table = list()
-        parser.init_parse_table()
+        # parser.init_parse_table()
         parse_tokens, depth, tree_entries = [ParseRule.R1.get_token(), ], [0], []
         while True:
             eof, scan_token, error, cur_seq, remained_char = scanner.get_next_token(input_f)
