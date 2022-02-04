@@ -11,6 +11,9 @@ _declaration_flag = False
 _array_flag = False
 _assign_offset = 1
 _return_val_address = -1
+_scope_stack = [0, ]
+_symbol_table = []
+_current_scope = 0
 
 
 def print_tree_row(info: str, depth: list, index: int, parse_tree_f, is_last: bool, is_dollar: bool):
@@ -70,20 +73,23 @@ def send_parser_error(file, error_type: ParserErrorType, _line_idx: int, info: s
 
 
 def semantic_check(parse_token: ParseToken):
-    global _declaration_flag, _array_flag, _assign_offset
+    global _declaration_flag, _array_flag, _assign_offset, _scope_stack, _current_scope
     if parse_token == ParseToken.TYPE_SPECIFIER:
         _declaration_flag = True
     if parse_token == ParseToken.BRACKET_OPEN:
         _array_flag = True
+    if parse_token == ParseToken.FUN_DECLARATION_PRIME:
+        _current_scope += 1
+        _scope_stack.append(_current_scope)
 
 
-def check_num_id_for_ss(current_parse_token: ParseToken, seq: str, next_parse_token: ParseToken):
-    global _return_val_address
+def check_num_id_for_ss(current_parse_token: ParseToken, seq: str):
+    global _return_val_address, _current_scope
     if current_parse_token == ParseToken.ID:
-        _return_val_address = codegen.get_addr(seq)
-        codegen.push(_return_val_address)
+        _return_val_address = codegen.get_addr(seq, _current_scope)
+        codegen.push_ss(_return_val_address)
     if current_parse_token == ParseToken.NUM:
-        codegen.push('#' + seq)
+        codegen.push_ss('#' + seq)
     if current_parse_token == ParseToken.VAR_DECLARATION_PRIME:
         _return_val_address = -1
 
