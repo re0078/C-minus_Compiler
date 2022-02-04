@@ -105,27 +105,33 @@ _current_type_declared = None
 _parameters_expected = None
 _new_param_name = None
 _new_param_type = None
+_func_declared = False
+_brace_func_list = []
 
 
 def construct_sem_sym_table_and_scope_stack(seq, current_token):
     global _scope_stack, _symbol_table_stack, _current_type_declared, _parameters_expected, _new_param_name, \
-        _new_param_type
+        _new_param_type, _func_declared, _brace_func_list
 
     # Handle Scope
     if current_token is ParseToken.BRACE_OPEN:
-        start_scope_idx = 0
-        for idx in range(len(_symbol_table_stack), -1, -1):
-            if _symbol_table_stack[idx][2] is SymbolStackElementType.FUNCTION:
-                start_scope_idx = idx
-                break
-            elif _symbol_table_stack[idx][2] is SymbolStackElementType.REPEAT:
-                start_scope_idx = idx
-                break
-        _scope_stack.append((start_scope_idx, codegen.get_pb_idx()))
+        if _func_declared:
+            start_scope_idx = 0
+            for idx in range(len(_symbol_table_stack), -1, -1):
+                if _symbol_table_stack[idx][2] is SymbolStackElementType.FUNCTION:
+                    start_scope_idx = idx
+                    break
+            _brace_func_list.append(True)
+            _scope_stack.append((start_scope_idx, codegen.get_pb_idx()))
+            _func_declared = False
+        else:
+            _brace_func_list.append(False)
     if current_token is ParseToken.BRACE_CLOSE:
-        start_scope_idx, _ = _scope_stack[-1]
-        _scope_stack = _scope_stack[:-1]
-        _symbol_table_stack = _symbol_table_stack[:start_scope_idx]
+        if _brace_func_list[-1]:
+            start_scope_idx, _ = _scope_stack[-1]
+            _scope_stack = _scope_stack[:-1]
+            _symbol_table_stack = _symbol_table_stack[:start_scope_idx]
+        _brace_func_list = _brace_func_list[:-1]
 
     # Handle Function & Variable Declaration
     if _current_type_declared is not None:
@@ -147,6 +153,7 @@ def construct_sem_sym_table_and_scope_stack(seq, current_token):
                 1], SymbolStackElementType.VARIABLE_ARRAY
     if current_token is ParseToken.FUN_DECLARATION_PRIME:
         _parameters_expected = []
+        _func_declared = True
         for idx in range(len(_symbol_table_stack), -1, -1):
             if _symbol_table_stack[idx][2] is SymbolStackElementType.UNKNOWN:
                 _symbol_table_stack[idx] = _symbol_table_stack[idx][0], _symbol_table_stack[idx][
@@ -174,9 +181,6 @@ def construct_sem_sym_table_and_scope_stack(seq, current_token):
             _new_param_name = None
             _new_param_type = None
 
-    # Handle Repeat
-    if current_token is ParseToken.REPEAT:
-        _symbol_table_stack.append((None, None, SymbolStackElementType.REPEAT))
 
 
 def apply_rule(seq: str, scan_token_type: ScanTokenType, parse_tokens: list, depth: list, parse_tree_f,
