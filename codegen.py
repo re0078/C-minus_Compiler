@@ -1,4 +1,4 @@
-from element_types import ActionSymbol, _VARS_OFFSET, _TEMP_OFFSET, _OFFSET_COE
+from element_types import ActionSymbol, _VARS_OFFSET, _TEMP_OFFSET, _OFFSET_COE, ParseToken
 
 _ADDR_KEY = _MODE_KEY = 0
 _OFFSET_KEY = 1
@@ -8,11 +8,24 @@ _val_map = {}
 _new_temp = _TEMP_OFFSET - _OFFSET_COE
 _new_var = _VARS_OFFSET - _OFFSET_COE
 
+_pb_i = 0
+_pb = []
+
 
 def push_pb(action: ActionSymbol, res: tuple):
     global _pb, _pb_i
-    _pb.append((_pb_i, action_symbol, res))
+    _pb.append((_pb_i, action, res))
     _pb_i += 1
+
+
+def get_pb_idx():
+    global _pb_i
+    return _pb_i
+
+
+def get_pb():
+    global _pb
+    return _pb
 
 
 def push_ss(val):
@@ -135,8 +148,10 @@ def prt() -> tuple:
     return get_value(o1),
 
 
-_pb_i = 0
-_pb = []
+def fill_jp(parse_token: ParseToken):
+    pass
+
+
 _routine_map = {ActionSymbol.ADD: arithmetic, ActionSymbol.SUB: arithmetic, ActionSymbol.MULT: arithmetic,
                 ActionSymbol.LT: arithmetic, ActionSymbol.EQ: arithmetic, ActionSymbol.ASSIGN: assign,
                 ActionSymbol.JPF: jpf, ActionSymbol.JP: jp, ActionSymbol.PRINT: prt}

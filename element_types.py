@@ -183,6 +183,16 @@ class ParseToken(Enum):
         return str(self)
 
 
+class SymbolStackElementType(Enum):
+    REPEAT = 0
+    FUNCTION = 1
+    VARIABLE_SINGLE = 2
+    VARIABLE_ARRAY = 3
+    PARAM_SINGLE = 4
+    PARAM_ARRAY = 5
+    UNKNOWN = 6
+
+
 class ActionSymbol(Enum):
     ADD = 1,
     MULT = 2,

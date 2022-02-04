@@ -1,6 +1,7 @@
 # from compiler import send_parser_error
 import codegen
 from element_types import *
+from element_types import SymbolStackElementType
 from error_type import ParserErrorType
 from parse_util import parse_table, epsilon_set, symbol_str_map
 from syncrhonizing import synchronizing_table as st
@@ -11,9 +12,8 @@ _declaration_flag = False
 _array_flag = False
 _assign_offset = 1
 _return_val_address = -1
-_scope_stack = [0, ]
-_symbol_table = []
-_current_scope = 0
+_scope_stack = []
+_symbol_table_stack = []
 
 
 def print_tree_row(info: str, depth: list, index: int, parse_tree_f, is_last: bool, is_dollar: bool):
@@ -72,39 +72,18 @@ def send_parser_error(file, error_type: ParserErrorType, _line_idx: int, info: s
     file.write(error)
 
 
-scope_stack = []
-symbol_table_stack = []
-declared_flag = None
-declared_name_flag = None
-fun_declared_flag = None
-var_declared_flag = None
-
-
-class SymbolStackElementType(Enum):
-    REPEAT = 0
-    FUNCTION = 1
-    VARIABLE_SINGLE = 2
-    VARIABLE_ARRAY = 3
-    PARAM_SINGLE = 4
-    PARAM_ARRAY = 5
-    UNKNOWN = 6
-
-
 def semantic_check(parse_token: ParseToken):
-    global _declaration_flag, _array_flag, _assign_offset, _scope_stack, _current_scope
+    global _declaration_flag, _array_flag, _assign_offset, _scope_stack
     if parse_token == ParseToken.TYPE_SPECIFIER:
         _declaration_flag = True
     if parse_token == ParseToken.BRACKET_OPEN:
         _array_flag = True
-    if parse_token == ParseToken.FUN_DECLARATION_PRIME:
-        _current_scope += 1
-        _scope_stack.append(_current_scope)
 
 
 def check_num_id_for_ss(current_parse_token: ParseToken, seq: str):
-    global _return_val_address, _current_scope
+    global _return_val_address, _scope_stack
     if current_parse_token == ParseToken.ID:
-        _return_val_address = codegen.get_addr(seq, _current_scope)
+        _return_val_address = codegen.get_addr(seq, _scope_stack[-1][0])
         codegen.push_ss(_return_val_address)
     if current_parse_token == ParseToken.NUM:
         codegen.push_ss('#' + seq)
@@ -120,7 +99,6 @@ def handle_action_symbol(action):
     if _array_flag:
         _array_flag = False
         _assign_offset = 1
-    construct_sem_sym_table_and_scope_stack(seq, current_token)
 
 
 _current_type_declared = None
@@ -130,47 +108,48 @@ _new_param_type = None
 
 
 def construct_sem_sym_table_and_scope_stack(seq, current_token):
-    global scope_stack, symbol_table_stack, _current_type_declared, _parameters_expected, _new_param_name, _new_param_type
+    global _scope_stack, _symbol_table_stack, _current_type_declared, _parameters_expected, _new_param_name, \
+        _new_param_type
 
     # Handle Scope
     if current_token is ParseToken.BRACE_OPEN:
         start_scope_idx = 0
-        for idx in range(len(symbol_table_stack), -1, -1):
-            if symbol_table_stack[idx][2] is SymbolStackElementType.FUNCTION:
+        for idx in range(len(_symbol_table_stack), -1, -1):
+            if _symbol_table_stack[idx][2] is SymbolStackElementType.FUNCTION:
                 start_scope_idx = idx
                 break
-            elif symbol_table_stack[idx][2] is SymbolStackElementType.REPEAT:
+            elif _symbol_table_stack[idx][2] is SymbolStackElementType.REPEAT:
                 start_scope_idx = idx
                 break
-        scope_stack.append(start_scope_idx)
+        _scope_stack.append((start_scope_idx, codegen.get_pb_idx()))
     if current_token is ParseToken.BRACE_CLOSE:
-        start_scope_idx = scope_stack[-1]
-        scope_stack = scope_stack[:-1]
-        symbol_table_stack = symbol_table_stack[:start_scope_idx]
+        start_scope_idx, _ = _scope_stack[-1]
+        _scope_stack = _scope_stack[:-1]
+        _symbol_table_stack = _symbol_table_stack[:start_scope_idx]
 
     # Handle Function & Variable Declaration
     if _current_type_declared is not None:
-        symbol_table_stack.append((seq, _current_type_declared, SymbolStackElementType.UNKNOWN))
+        _symbol_table_stack.append((seq, _current_type_declared, SymbolStackElementType.UNKNOWN))
         _current_type_declared = None
     if current_token is ParseToken.TYPE_SPECIFIER and _parameters_expected is None:  # just to be run for declarations
         _current_type_declared = seq
     if current_token is ParseToken.VAR_DECLARATION_PRIME:
         prev_dec_idx = 0
-        for idx in range(len(symbol_table_stack), -1, -1):
-            if symbol_table_stack[idx][2] is SymbolStackElementType.UNKNOWN:
+        for idx in range(len(_symbol_table_stack), -1, -1):
+            if _symbol_table_stack[idx][2] is SymbolStackElementType.UNKNOWN:
                 prev_dec_idx = idx
                 break
         if seq == ";":
-            symbol_table_stack[prev_dec_idx] = symbol_table_stack[prev_dec_idx][0], symbol_table_stack[prev_dec_idx][
+            _symbol_table_stack[prev_dec_idx] = _symbol_table_stack[prev_dec_idx][0], _symbol_table_stack[prev_dec_idx][
                 1], SymbolStackElementType.VARIABLE_SINGLE
         else:
-            symbol_table_stack[prev_dec_idx] = symbol_table_stack[prev_dec_idx][0], symbol_table_stack[prev_dec_idx][
+            _symbol_table_stack[prev_dec_idx] = _symbol_table_stack[prev_dec_idx][0], _symbol_table_stack[prev_dec_idx][
                 1], SymbolStackElementType.VARIABLE_ARRAY
     if current_token is ParseToken.FUN_DECLARATION_PRIME:
         _parameters_expected = []
-        for idx in range(len(symbol_table_stack), -1, -1):
-            if symbol_table_stack[idx][2] is SymbolStackElementType.UNKNOWN:
-                symbol_table_stack[idx] = symbol_table_stack[idx][0], symbol_table_stack[idx][
+        for idx in range(len(_symbol_table_stack), -1, -1):
+            if _symbol_table_stack[idx][2] is SymbolStackElementType.UNKNOWN:
+                _symbol_table_stack[idx] = _symbol_table_stack[idx][0], _symbol_table_stack[idx][
                     1], SymbolStackElementType.FUNCTION
                 break
 
@@ -180,7 +159,7 @@ def construct_sem_sym_table_and_scope_stack(seq, current_token):
             _parameters_expected = None
     if current_token is ParseToken.PARENTHESIS_CLOSE and _parameters_expected is not None:
         _parameters_expected.append((_new_param_name, "int", _new_param_type))
-        symbol_table_stack += _parameters_expected
+        _symbol_table_stack += _parameters_expected
         _parameters_expected = None
         _new_param_name = None
         _new_param_type = None
@@ -197,7 +176,7 @@ def construct_sem_sym_table_and_scope_stack(seq, current_token):
 
     # Handle Repeat
     if current_token is ParseToken.REPEAT:
-        symbol_table_stack.append((None, None, SymbolStackElementType.REPEAT))
+        _symbol_table_stack.append((None, None, SymbolStackElementType.REPEAT))
 
 
 def apply_rule(seq: str, scan_token_type: ScanTokenType, parse_tokens: list, depth: list, parse_tree_f,
@@ -209,13 +188,9 @@ def apply_rule(seq: str, scan_token_type: ScanTokenType, parse_tokens: list, dep
         handle_action_symbol(init_token)
         return parse_tokens[1:], depth[1:], tree_entries, True, False
     semantic_check(init_token)
+    construct_sem_sym_table_and_scope_stack(seq, init_token)
     if len(parse_tokens) > 1:
-        check_num_id_for_ss(init_token, seq, parse_tokens[1])
-    semantic_check(seq, parse_tokens[0])
-    if scan_token_type == ScanTokenType.ID:
-        codegen.push(codegen.get_addr(seq))
-    elif scan_token_type == ScanTokenType.NUM:
-        codegen.push('#' + seq)
+        check_num_id_for_ss(parse_tokens[1], seq)
     if init_token.get_type() != ParseTokenType.NON_TERMINAL and init_token == parse_token_equivalent:
         if parse_token_equivalent == ParseToken.DOLLAR:
             tree_entries.append((str(parse_token_equivalent).format(seq=seq), depth[0]))
