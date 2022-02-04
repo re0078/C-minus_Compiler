@@ -1,4 +1,4 @@
-from element_types import ActionSymbol, _VARS_OFFSET, _TEMP_OFFSET, _OFFSET_COE, AssignActionMode
+from element_types import ActionSymbol, _VARS_OFFSET, _TEMP_OFFSET, _OFFSET_COE
 
 _ADDR_KEY = _OFFSET_KEY = 0
 _SCOPE_KEY = _MODE_KEY = 1

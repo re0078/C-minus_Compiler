@@ -67,12 +67,35 @@ def send_parser_error(file, error_type: ParserErrorType, _line_idx: int, info: s
     file.write(error)
 
 
-def semantic_check(seq: str):
-    global _declaration_flag, _array_flag
+scope_stack = []
+symbol_table_stack = []
+declared_flag = None
+declared_name_flag = None
+fun_declared_flag = None
+var_declared_flag = None
+
+
+def semantic_check(seq: str, parse_tokens: list, _line_idx, error_file):
+    global _declaration_flag, _array_flag, declared_flag, fun_declared_flag, var_declared_flag, declared_name_flag, symbol_table_stack
     if seq == str(ParseToken.INT).lower():
         _declaration_flag = True
     if seq == '[':
         _array_flag = True
+    if declared_name_flag is not None:
+        if parse_tokens[0] is ParseToken.FUN_DECLARATION_PRIME:
+            scope_stack.append(len(symbol_table_stack))
+            symbol_table_stack.append((declared_name_flag, declared_flag, True))
+        elif parse_tokens[0] is ParseToken.VAR_DECLARATION_PRIME:
+            symbol_table_stack.append((seq, declared_flag, False))
+        declared_name_flag = None
+    if declared_flag is not None and parse_tokens[0] is ParseToken.ID:
+        declared_name_flag = seq
+        declared_flag = None
+    if parse_tokens[0] is ParseToken.TYPE_SPECIFIER:
+        declared_flag = seq
+    if parse_tokens[0] is ParseToken.BRACE_CLOSE:
+        scope = scope_stack[-1]
+        symbol_table_stack = symbol_table_stack[:scope]
 
 
 def apply_rule(seq: str, scan_token_type: ScanTokenType, parse_tokens: list, depth: list, parse_tree_f,
