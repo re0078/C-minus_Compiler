@@ -138,13 +138,13 @@ def construct_sem_sym_table_and_scope_stack(seq, current_token):
     # Handle Scope
     if current_token is ParseToken.BRACE_OPEN:
         if _func_declared:
-            start_scope_idx = 0
-            for idx in range(len(_symbol_table_stack) - 1, -1, -1):
-                if _symbol_table_stack[idx][_TYPE_KEY] is SymbolStackElementType.FUNCTION:
-                    start_scope_idx = idx + 1
-                    break
-            _brace_func_list.append(True)
-            _scope_stack.append((start_scope_idx, codegen.get_pb_idx()))
+            # start_scope_idx = 0
+            # for idx in range(len(_symbol_table_stack) - 1, -1, -1):
+            #     if _symbol_table_stack[idx][_TYPE_KEY] is SymbolStackElementType.FUNCTION:
+            #         start_scope_idx = idx + 1
+            #         break
+            # _brace_func_list.append(True)
+            # _scope_stack.append((start_scope_idx, codegen.get_pb_idx()))
             _func_declared = False
         else:
             _brace_func_list.append(False)
@@ -167,6 +167,7 @@ def construct_sem_sym_table_and_scope_stack(seq, current_token):
             if _symbol_table_stack[idx][_TYPE_KEY] is SymbolStackElementType.UNKNOWN:
                 prev_dec_idx = idx
                 break
+        # TODO check for error b
         if seq == ";":
             _symbol_table_stack[prev_dec_idx][_TYPE_KEY] = SymbolStackElementType.VARIABLE_SINGLE
         else:
@@ -178,6 +179,8 @@ def construct_sem_sym_table_and_scope_stack(seq, current_token):
             if _symbol_table_stack[idx][_TYPE_KEY] is SymbolStackElementType.UNKNOWN:
                 _symbol_table_stack[idx][_TYPE_KEY] = SymbolStackElementType.FUNCTION
                 break
+        _brace_func_list.append(True)
+        _scope_stack.append((len(_symbol_table_stack), codegen.get_pb_idx()))
 
     #  Handle Parameters
     if current_token is ParseToken.PARAMS:
