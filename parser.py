@@ -77,7 +77,7 @@ def send_parser_error(file, error_type: ParserErrorType, _line_idx: int, info: s
 
 def semantic_check(parse_token: ParseToken):
     global _declaration_flag, _array_flag, _assign_offset, _scope_stack
-    if parse_token == ParseToken.TYPE_SPECIFIER:
+    if parse_token in (ParseToken.TYPE_SPECIFIER, ParseToken.INT):
         _declaration_flag = True
     if parse_token == ParseToken.BRACKET_OPEN:
         _array_flag = True

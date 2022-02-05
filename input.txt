@@ -1,13 +1,18 @@
+/*===== Sample 1 =====*/
+int foo(int x){
+	if (x < 0){
+		//output(x);
+		return 1;
+	}
+	else {
+		//output(x);
+		return x + 2;
+	} endif
+}
 void main(void){
-    int prod;
-    int i;
-    prod = 1;
-    i = 1;
-    repeat {
-        prod = i * prod;
-        i = i + 2;
-        if (prod - i == 2){
-            i = i + 1;
-        } endif
-    } until (7 > i)
+	int i;
+	i= foo(0);
+	//output(i);
+	i=foo(10);
+	//output(i);
 }
