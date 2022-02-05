@@ -10,10 +10,13 @@ prediction_table = {}
 definite_table = {}
 _declaration_flag = False
 _array_flag = False
-_assign_offset = 1
+_assign_offset = 0
 _return_val_address = -1
-_scope_stack = []
+_scope_stack = [(0, 0)]
 _symbol_table_stack = []
+_repeat_jump_state = 0
+_finished_brace = False
+_NAME_KEY, _RET_KEY, _TYPE_KEY = 0, 1, 2
 
 
 def print_tree_row(info: str, depth: list, index: int, parse_tree_f, is_last: bool, is_dollar: bool):
@@ -91,14 +94,33 @@ def check_num_id_for_ss(current_parse_token: ParseToken, seq: str):
         _return_val_address = -1
 
 
+def handle_repeat_brace(amount: int) -> int:
+    global _repeat_jump_state
+    if _repeat_jump_state == 1:
+        amount = -1
+    if _repeat_jump_state == 2:
+        amount = codegen.get_pb_idx() + 2
+    _repeat_jump_state = (_repeat_jump_state + 1) % 4
+    return amount
+
+
 def handle_action_symbol(action):
-    global _declaration_flag, _array_flag, _assign_offset
-    codegen.general_routine(action, (_declaration_flag, _assign_offset))
+    global _declaration_flag, _array_flag, _assign_offset, _brace_list
+    amount = -1
+    if action == ActionSymbol.ASSIGN:
+        amount = _assign_offset
+    if action == ActionSymbol.JP or action == ActionSymbol.JPF:
+        be_type, amount = _brace_list[-1]
+        if be_type == BraceElementType.REPEAT:
+            amount = handle_repeat_brace(amount)
+        if be_type == BraceElementType.IF:
+            amount = -1
+    codegen.general_routine(action, (_declaration_flag, amount))
     if _declaration_flag:
         _declaration_flag = False
     if _array_flag:
         _array_flag = False
-        _assign_offset = 1
+        _assign_offset = 0
 
 
 _current_type_declared = None
@@ -117,9 +139,9 @@ def construct_sem_sym_table_and_scope_stack(seq, current_token):
     if current_token is ParseToken.BRACE_OPEN:
         if _func_declared:
             start_scope_idx = 0
-            for idx in range(len(_symbol_table_stack), -1, -1):
-                if _symbol_table_stack[idx][2] is SymbolStackElementType.FUNCTION:
-                    start_scope_idx = idx
+            for idx in range(len(_symbol_table_stack) - 1, -1, -1):
+                if _symbol_table_stack[idx][_TYPE_KEY] is SymbolStackElementType.FUNCTION:
+                    start_scope_idx = idx + 1
                     break
             _brace_func_list.append(True)
             _scope_stack.append((start_scope_idx, codegen.get_pb_idx()))
@@ -134,30 +156,27 @@ def construct_sem_sym_table_and_scope_stack(seq, current_token):
         _brace_func_list = _brace_func_list[:-1]
 
     # Handle Function & Variable Declaration
-    if _current_type_declared is not None:
-        _symbol_table_stack.append((seq, _current_type_declared, SymbolStackElementType.UNKNOWN))
+    if _current_type_declared is not None and current_token == ParseToken.ID:
+        _symbol_table_stack.append([seq, _current_type_declared, SymbolStackElementType.UNKNOWN])
         _current_type_declared = None
     if current_token is ParseToken.TYPE_SPECIFIER and _parameters_expected is None:  # just to be run for declarations
         _current_type_declared = seq
     if current_token is ParseToken.VAR_DECLARATION_PRIME:
         prev_dec_idx = 0
-        for idx in range(len(_symbol_table_stack), -1, -1):
-            if _symbol_table_stack[idx][2] is SymbolStackElementType.UNKNOWN:
+        for idx in range(len(_symbol_table_stack) - 1, -1, -1):
+            if _symbol_table_stack[idx][_TYPE_KEY] is SymbolStackElementType.UNKNOWN:
                 prev_dec_idx = idx
                 break
         if seq == ";":
-            _symbol_table_stack[prev_dec_idx] = _symbol_table_stack[prev_dec_idx][0], _symbol_table_stack[prev_dec_idx][
-                1], SymbolStackElementType.VARIABLE_SINGLE
+            _symbol_table_stack[prev_dec_idx][_TYPE_KEY] = SymbolStackElementType.VARIABLE_SINGLE
         else:
-            _symbol_table_stack[prev_dec_idx] = _symbol_table_stack[prev_dec_idx][0], _symbol_table_stack[prev_dec_idx][
-                1], SymbolStackElementType.VARIABLE_ARRAY
+            _symbol_table_stack[prev_dec_idx][_TYPE_KEY] = SymbolStackElementType.VARIABLE_ARRAY
     if current_token is ParseToken.FUN_DECLARATION_PRIME:
         _parameters_expected = []
         _func_declared = True
-        for idx in range(len(_symbol_table_stack), -1, -1):
-            if _symbol_table_stack[idx][2] is SymbolStackElementType.UNKNOWN:
-                _symbol_table_stack[idx] = _symbol_table_stack[idx][0], _symbol_table_stack[idx][
-                    1], SymbolStackElementType.FUNCTION
+        for idx in range(len(_symbol_table_stack) - 1, -1, -1):
+            if _symbol_table_stack[idx][_TYPE_KEY] is SymbolStackElementType.UNKNOWN:
+                _symbol_table_stack[idx][_TYPE_KEY] = SymbolStackElementType.FUNCTION
                 break
 
     #  Handle Parameters
@@ -189,27 +208,36 @@ _new_else = False
 
 
 def construct_brace_tracking_stack(current_token):
-    global _new_repeat, _new_if, _new_else, _brace_list
+    global _new_repeat, _new_if, _new_else, _brace_list, _brace_func_list, _finished_brace, _symbol_table_stack
     if current_token is ParseToken.BRACE_OPEN:
+        _finished_brace = False
         if _brace_func_list[-1]:
-            _brace_list.append((BraceElementType.FUNCTION, codegen.get_pb_idx()))
+            if _symbol_table_stack[-1][_NAME_KEY] == "main":
+                codegen.fill_jp((BraceElementType.MAIN, codegen.get_pb_idx()))
+            _brace_list.append([BraceElementType.FUNCTION, codegen.get_pb_idx()])
         if _new_repeat:
-            _brace_list.append((BraceElementType.REPEAT, codegen.get_pb_idx()))
             _new_repeat = False
         if _new_if:
-            _brace_list.append((BraceElementType.IF, codegen.get_pb_idx()))
             _new_if = False
-        if _new_else:
-            _brace_list.append((BraceElementType.ELSE, codegen.get_pb_idx()))
-            _new_else = False
     elif current_token is ParseToken.BRACE_CLOSE:
-        _brace_list = _brace_list[:-1]
+        _finished_brace = True
     elif current_token is ParseToken.REPEAT:
+        _brace_list.append([BraceElementType.REPEAT, codegen.get_pb_idx() + 2])
         _new_repeat = True
+    elif _finished_brace and _brace_list[-1][0] == BraceElementType.REPEAT and \
+            current_token == ParseToken.STATEMENT_LIST:
+        codegen.fill_jp(_brace_list[-1])
+        _finished_brace = False
+        _brace_list = _brace_list[:-1]
     elif current_token is ParseToken.IF:
+        _brace_list.append([BraceElementType.IF, codegen.get_pb_idx() + 1])
         _new_if = True
-    elif current_token is ParseToken.ELSE:
-        _new_else = True
+    elif current_token is ParseToken.ELSE_STMT:
+        codegen.fill_jp(_brace_list[-1])
+        _finished_brace = False
+        _brace_list = _brace_list[:-1]
+    elif current_token is ParseToken.STATEMENT and _brace_list[-1][0] == BraceElementType.IF:
+        _brace_list[-1][1] = codegen.get_pb_idx()
 
 
 def apply_rule(seq: str, scan_token_type: ScanTokenType, parse_tokens: list, depth: list, parse_tree_f,
@@ -217,13 +245,13 @@ def apply_rule(seq: str, scan_token_type: ScanTokenType, parse_tokens: list, dep
     parse_token_equivalent = get_parse_token_for_seq(seq, scan_token_type)
     init_token: ParseToken
     init_token = parse_tokens[0]
+    semantic_check(init_token)
+    construct_sem_sym_table_and_scope_stack(seq, init_token)
+    check_num_id_for_ss(init_token, seq)
+    construct_brace_tracking_stack(init_token)
     if type(init_token) == ActionSymbol:
         handle_action_symbol(init_token)
         return parse_tokens[1:], depth[1:], tree_entries, True, False
-    semantic_check(init_token)
-    construct_sem_sym_table_and_scope_stack(seq, init_token)
-    if len(parse_tokens) > 1:
-        check_num_id_for_ss(parse_tokens[1], seq)
     if init_token.get_type() != ParseTokenType.NON_TERMINAL and init_token == parse_token_equivalent:
         if parse_token_equivalent == ParseToken.DOLLAR:
             tree_entries.append((str(parse_token_equivalent).format(seq=seq), depth[0]))

@@ -62,7 +62,7 @@ class ScanTokenType(Enum):
     WHITESPACE = ScanState(whitespaces_set, ends=True),
     KEYWORD = ScanState(keywords_list, ends=True, repeatable=False),
     EOF = (),
-    ERROR = ()
+    ERROR = (),
 
     def get_state(self, state_order: int) -> ScanState:
         return self.value[state_order]
@@ -162,7 +162,7 @@ class ParseToken(Enum):
     DOLLAR = (68, ParseTokenType.TERMINAL),
     PARAM = (69, ParseTokenType.NON_TERMINAL),
     SIMPLE_EXPRESSION_PRIME = (70, ParseTokenType.NON_TERMINAL),
-    IS = (71, ParseTokenType.TERMINAL)
+    IS = (71, ParseTokenType.TERMINAL),
 
     def get_type(self) -> ParseTokenType:
         return self.value[0][1]
@@ -184,23 +184,25 @@ class ParseToken(Enum):
 
 
 class SymbolStackElementType(Enum):
-    REPEAT = 0
-    FUNCTION = 1
-    VARIABLE_SINGLE = 2
-    VARIABLE_ARRAY = 3
-    PARAM_SINGLE = 4
-    PARAM_ARRAY = 5
-    UNKNOWN = 6
+    REPEAT = 0,
+    FUNCTION = 1,
+    VARIABLE_SINGLE = 2,
+    VARIABLE_ARRAY = 3,
+    PARAM_SINGLE = 4,
+    PARAM_ARRAY = 5,
+    UNKNOWN = 6,
 
 
 class BraceElementType(Enum):
-    FUNCTION = 0
-    REPEAT = 1
-    IF = 2
-    ELSE = 3
+    FUNCTION = 0,
+    REPEAT = 1,
+    IF = 2,
+    ELSE = 3,
+    MAIN = 4,
 
 
 class ActionSymbol(Enum):
+    PID = 0,
     ADD = 1,
     MULT = 2,
     SUB = 3,
@@ -209,7 +211,7 @@ class ActionSymbol(Enum):
     ASSIGN = 6,
     JPF = 7,
     JP = 8,
-    PRINT = 9
+    PRINT = 9,
 
     def __str__(self):
         return self.name
@@ -295,8 +297,6 @@ class ParseRule(Enum):
     R44 = [ParseToken.ARG_LIST, [[ParseToken.EXPRESSION, ParseToken.ARG_LIST_PRIME], ]],
     R45 = [ParseToken.ARG_LIST_PRIME, [[ParseToken.COMMA, ParseToken.EXPRESSION, ParseToken.ARG_LIST_PRIME],
                                        [ParseToken.EPSILON, ]]],
-
-    # R46 = [ParseToken.OUTPUT_STMT, [ParseToken.OUTPUT, ParseToken.PARENTHESIS_OPEN, ]]
 
     def get_prods(self) -> tuple:
         return self.value[0][1]

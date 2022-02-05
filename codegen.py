@@ -1,7 +1,7 @@
-from element_types import ActionSymbol, _VARS_OFFSET, _TEMP_OFFSET, _OFFSET_COE, ParseToken
+from element_types import ActionSymbol, _VARS_OFFSET, _TEMP_OFFSET, _OFFSET_COE, BraceElementType
 
 _ADDR_KEY = _MODE_KEY = 0
-_OFFSET_KEY = 1
+_AMOUNT_KEY = 1
 _ss = []
 _lexeme_map = {}
 _val_map = {}
@@ -12,9 +12,9 @@ _pb_i = 0
 _pb = []
 
 
-def push_pb(action: ActionSymbol, res: tuple):
+def push_pb(action: ActionSymbol, res: list):
     global _pb, _pb_i
-    _pb.append((_pb_i, action, res))
+    _pb.append([_pb_i, action, res])
     _pb_i += 1
 
 
@@ -76,21 +76,20 @@ def get_temp():
     return _new_temp
 
 
-def get_value(o: str):
-    if '#' == o[0]:
-        val = int(o[1:])
-    elif '?' == o:
-        val = -1
-    else:
-        o = int(o)
+def get_value(o):
+    if type(o) == int:
         if o >= _VARS_OFFSET:
             val = int(_val_map[o])
         else:
             val = o
+    elif '#' in o:
+        val = int(o[1:])
+    elif '?' == o:
+        val = -1
     return val
 
 
-def arithmetic(action: ActionSymbol) -> tuple:
+def arithmetic(action: ActionSymbol) -> list:
     global _val_map
     t = get_temp()
     o1 = pop_ss()
@@ -105,42 +104,35 @@ def arithmetic(action: ActionSymbol) -> tuple:
     elif action == ActionSymbol.MULT:
         _val_map[t] = v1 * v2
     elif action == ActionSymbol.LT:
-        _val_map[t] = int(v1 < v2)
+        _val_map[t] = int(v2 < v1)
     else:
         _val_map[t] = int(v1 == v2)
-    return o1, o2, t
+    return [o1, o2, t]
 
 
-def assign(declarative: bool, offset: int) -> tuple:
+def assign(declarative: bool, offset: int) -> list:
     global _val_map
     if declarative:
         o1 = "#0"
         o2 = pop_ss()
     else:
         o1 = pop_ss()
-        if offset <= 1:
+        if offset <= _OFFSET_COE:
             o2 = pop_ss()
         else:
             o2 = 0
     _val_map[o2 + offset] = get_value(o1)
-    return o1, o2
+    return [o1, o2]
 
 
-def jpf(determined: bool = False) -> tuple:
-    o1 = pop_ss()
-    if determined:
-        o2 = pop_ss()
-    else:
-        o2 = '?'
-    return o1, o2
-
-
-def jp(determined: bool = False) -> tuple:
-    if determined:
+def jump(action: ActionSymbol, line: int) -> list:
+    if line == -1:
+        line = '?'
+    if action == ActionSymbol.JP:
+        return [line, ]
+    if action == ActionSymbol.JPF:
         o1 = pop_ss()
-        return o1,
-    else:
-        return '?',
+        return [o1, line]
 
 
 def prt() -> tuple:
@@ -148,36 +140,45 @@ def prt() -> tuple:
     return get_value(o1),
 
 
-def fill_jp(parse_token: ParseToken):
-    pass
+def fill_jp(brace_element: tuple):
+    global _pb, _MODE_KEY, _AMOUNT_KEY
+    be_type, start_line = brace_element[_MODE_KEY], brace_element[_AMOUNT_KEY]
+    inst_idx, amount = 0, -1
+    if be_type in (BraceElementType.REPEAT, BraceElementType.IF):
+        inst_idx, amount = start_line - 1, get_pb_idx()
+    if be_type == BraceElementType.MAIN:
+        amount = start_line
+    _pb[inst_idx][-1] = amount
 
 
 _routine_map = {ActionSymbol.ADD: arithmetic, ActionSymbol.SUB: arithmetic, ActionSymbol.MULT: arithmetic,
                 ActionSymbol.LT: arithmetic, ActionSymbol.EQ: arithmetic, ActionSymbol.ASSIGN: assign,
-                ActionSymbol.JPF: jpf, ActionSymbol.JP: jp, ActionSymbol.PRINT: prt}
+                ActionSymbol.JPF: jump, ActionSymbol.JP: jump, ActionSymbol.PRINT: prt}
 
 
 def general_routine(action_symbol: ActionSymbol, arg: tuple = (False, 0)):
-    global _pb_i, _pb, _MODE_KEY, _OFFSET_KEY
+    global _pb_i, _pb, _MODE_KEY, _AMOUNT_KEY
     routine = _routine_map[action_symbol]
     mode = arg[_MODE_KEY]
-    offset = arg[_OFFSET_KEY]
-    if routine == assign:
-        if mode:
-            for i in range(offset):
-                res = assign(mode, i * _OFFSET_COE)
-                push_pb(action_symbol, res)
-        else:
-            res = assign(mode, offset)
+    amount = arg[_AMOUNT_KEY]
+    if routine == assign and mode:
+        amount = max(1, amount)
+        for i in range(amount):
+            res = assign(mode, i * _OFFSET_COE)
             push_pb(action_symbol, res)
     else:
-        if routine == arithmetic:
-            res = routine(action_symbol)
+        if routine == assign:
+            res = assign(mode, amount * _OFFSET_COE)
+        elif routine == arithmetic:
+            res = arithmetic(action_symbol)
+        elif routine == jump:
+            res = jump(action_symbol, amount)
         else:
             res = routine()
         push_pb(action_symbol, res)
 
 
 def initiation_routine():
-    res = jp()
-    push_pb(ActionSymbol.JP, res)
+    action = ActionSymbol.JP
+    res = jump(action, -1)
+    push_pb(action, res)

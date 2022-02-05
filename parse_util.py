@@ -22,8 +22,8 @@ parse_table = {
 
     (ParseToken.FUN_DECLARATION_PRIME, ParseToken.PARENTHESIS_OPEN): ParseRule.R7.get_prods()[0],
 
-    # (ParseToken.TYPE_SPECIFIER, ParseToken.INT): ParseRule.R8.get_prods()[0],
-    # (ParseToken.TYPE_SPECIFIER, ParseToken.VOID): ParseRule.R8.get_prods()[1],
+    (ParseToken.TYPE_SPECIFIER, ParseToken.INT): ParseRule.R8.get_prods()[0],
+    (ParseToken.TYPE_SPECIFIER, ParseToken.VOID): ParseRule.R8.get_prods()[1],
 
     (ParseToken.PARAMS, ParseToken.INT): ParseRule.R9.get_prods()[0],
     (ParseToken.PARAMS, ParseToken.VOID): ParseRule.R9.get_prods()[1],
@@ -108,7 +108,7 @@ parse_table = {
     (ParseToken.SIMPLE_EXPRESSION_PRIME, ParseToken.EQUALS): ParseRule.R26.get_prods()[0],
 
     (ParseToken.C, ParseToken.LESS): ParseRule.R27.get_prods()[0],
-    (ParseToken.C, ParseToken.EQUALS): ParseRule.R27.get_prods()[0],
+    (ParseToken.C, ParseToken.EQUALS): ParseRule.R27.get_prods()[1],
 
     # (ParseToken.RELOP, ParseToken.LESS): ParseRule.R28.get_prods()[0],
     # (ParseToken.RELOP, ParseToken.EQUALS): ParseRule.R28.get_prods()[1],
@@ -126,7 +126,7 @@ parse_table = {
     (ParseToken.ADDITIVE_EXPRESSION_ZEGOND, ParseToken.NUM): ParseRule.R31.get_prods()[0],
 
     (ParseToken.D, ParseToken.PLUS): ParseRule.R32.get_prods()[0],
-    (ParseToken.D, ParseToken.MINUS): ParseRule.R32.get_prods()[0],
+    (ParseToken.D, ParseToken.MINUS): ParseRule.R32.get_prods()[1],
 
     # (ParseToken.ADDOP, ParseToken.PLUS): ParseRule.R33.get_prods()[0],
     # (ParseToken.ADDOP, ParseToken.MINUS): ParseRule.R33.get_prods()[1],
