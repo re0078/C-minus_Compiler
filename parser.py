@@ -229,6 +229,7 @@ def construct_sem_sym_table_and_scope_stack(seq, current_token):
             _parameters_expected = None
     if current_token is ParseToken.PARENTHESIS_CLOSE and _parameters_expected is not None:
         _parameters_expected.append([_new_param_name, "int", _new_param_type])
+        _symbol_table_stack[-1].append(len(_parameters_expected))
         _symbol_table_stack += _parameters_expected
         _parameters_expected = None
         _new_param_name = None
