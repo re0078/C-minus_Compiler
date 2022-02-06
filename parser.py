@@ -1,5 +1,6 @@
 # from compiler import send_parser_error
 import codegen
+from codegen import _OFFSET_COE
 from element_types import *
 from element_types import SymbolStackElementType
 from error_type import ParserErrorType
@@ -8,15 +9,16 @@ from syncrhonizing import synchronizing_table as st
 
 prediction_table = {}
 definite_table = {}
-_declaration_flag = False
-_array_flag = False
-_assign_offset = 0
 _return_val_address = -1
 _scope_stack = [(0, 0)]
+_NAME_KEY, _RET_KEY, _TYPE_KEY, _ARGS_COUNT_KEY = 0, 1, 2, 3
 _symbol_table_stack = []
 _repeat_jump_state = 0
 _finished_brace = False
-_NAME_KEY, _RET_KEY, _TYPE_KEY = 0, 1, 2
+_MODE_KEY, _AMOUNT_KEY = 0, 1
+_assign_flag = [AssignMode.DECLARATION, 0]
+_BASE_KEY, _ARG_ORDER_KEY = 1, 2
+_selected_func = [None, -1, 1]
 
 
 def print_tree_row(info: str, depth: list, index: int, parse_tree_f, is_last: bool, is_dollar: bool):
@@ -75,21 +77,58 @@ def send_parser_error(file, error_type: ParserErrorType, _line_idx: int, info: s
     file.write(error)
 
 
-def semantic_check(parse_token: ParseToken):
-    global _declaration_flag, _array_flag, _assign_offset, _scope_stack
-    if parse_token in (ParseToken.TYPE_SPECIFIER, ParseToken.INT):
-        _declaration_flag = True
-    if parse_token == ParseToken.BRACKET_OPEN:
-        _array_flag = True
+def get_nearest_definition(seq: str) -> (SymbolStackElementType, int):
+    global _symbol_table_stack, _scope_stack
+    for idx in range(len(_symbol_table_stack) - 1, -1, -1):
+        record = _symbol_table_stack[idx]
+        if record[_NAME_KEY] == seq:
+            for scope_idx in range(len(_scope_stack) - 1, -1, -1):
+                if _scope_stack[scope_idx][0] < idx:
+                    return record[_TYPE_KEY], idx
+            break
+    return None, _scope_stack[-1][0]
 
 
-def check_num_id_for_ss(current_parse_token: ParseToken, seq: str):
-    global _return_val_address, _scope_stack
-    if current_parse_token == ParseToken.ID:
-        _return_val_address = codegen.get_addr(seq, _scope_stack[-1][0])
-        codegen.push_ss(_return_val_address)
-    if current_parse_token == ParseToken.NUM:
-        codegen.push_ss('#' + seq)
+def is_function_param(seq: str, function_name) -> bool:
+    global _symbol_table_stack
+    element_type, scope = get_nearest_definition(function_name)
+    if element_type == SymbolStackElementType.FUNCTION:
+        function = _symbol_table_stack[scope]
+        for param_idx in range(len(function[_ARGS_COUNT_KEY])):
+            if _symbol_table_stack[scope + param_idx][_NAME_KEY] == seq:
+                return True
+    return False
+
+
+def check_num_id_for_ss(current_parse_token: ParseToken, seq: str) -> bool:
+    global _return_val_address, _scope_stack, _assign_flag, _selected_func
+    if current_parse_token in (ParseToken.ID, ParseToken.NUM):
+        mode = _assign_flag[_MODE_KEY]
+        if mode == AssignMode.ARG_VALUING:
+            _assign_flag[_AMOUNT_KEY] = _selected_func[_BASE_KEY] + _selected_func[_ARG_ORDER_KEY] * _OFFSET_COE
+            _selected_func[_ARG_ORDER_KEY] += 1
+        if current_parse_token == ParseToken.NUM:
+            _assign_flag = [AssignMode.NUM_VALUING, -1]
+            codegen.push_ss('#' + seq)
+        if current_parse_token == ParseToken.ID:
+            element_type, scope = get_nearest_definition(seq)
+            if mode == AssignMode.DECLARATION:
+                if element_type is not None:
+                    return False
+                _return_val_address = codegen.get_addr(seq, scope)
+                _assign_flag[_AMOUNT_KEY] = _return_val_address
+                codegen.push_ss(_return_val_address)
+            if mode == AssignMode.VALUING:
+                if element_type is None:
+                    return False
+                addr = codegen.get_addr(seq, scope)
+                if element_type == SymbolStackElementType.FUNCTION:
+                    _selected_func = [seq, addr, _symbol_table_stack[scope][_ARGS_COUNT_KEY]]
+                    _assign_flag = [AssignMode.FUNCTION_CALL, addr]
+                if element_type in (SymbolStackElementType.PARAM_ARRAY, SymbolStackElementType.PARAM_SINGLE):
+                    if is_function_param(seq, _selected_func[_NAME_KEY]):
+                        _assign_flag = [AssignMode.PARAM_VALUING, addr]
+                codegen.push_ss(addr)
     if current_parse_token == ParseToken.VAR_DECLARATION_PRIME:
         _return_val_address = -1
 
@@ -105,22 +144,24 @@ def handle_repeat_brace(amount: int) -> int:
 
 
 def handle_action_symbol(action):
-    global _declaration_flag, _array_flag, _assign_offset, _brace_list
-    amount = -1
-    if action == ActionSymbol.ASSIGN:
-        amount = _assign_offset
+    global _brace_list, _return_val_address, _assign_flag
+    mode, amount = _assign_flag[_MODE_KEY], _assign_flag[_AMOUNT_KEY]
     if action == ActionSymbol.JP or action == ActionSymbol.JPF:
         be_type, amount = _brace_list[-1]
         if be_type == BraceElementType.REPEAT:
             amount = handle_repeat_brace(amount)
         if be_type == BraceElementType.IF:
             amount = -1
-    codegen.general_routine(action, (_declaration_flag, amount))
-    if _declaration_flag:
-        _declaration_flag = False
-    if _array_flag:
-        _array_flag = False
-        _assign_offset = 0
+    codegen.general_routine(action, (mode, amount))
+    _assign_flag = [AssignMode.VALUING, -1]
+
+
+def determine_assign_flag(parse_tokens: list):
+    global _assign_flag
+    if len(parse_tokens) >= 2 and parse_tokens[:2] == [ActionSymbol.ASSIGN, ParseToken.ARG_LIST_PRIME]:
+        _assign_flag = [AssignMode.ARG_VALUING, -1]
+    if len(parse_tokens) >= 2 and (parse_tokens[:2] == [ParseToken.INT, ParseToken.ID]):
+        _assign_flag = [AssignMode.DECLARATION, -1]
 
 
 _current_type_declared = None
@@ -187,7 +228,7 @@ def construct_sem_sym_table_and_scope_stack(seq, current_token):
         if seq == "void":
             _parameters_expected = None
     if current_token is ParseToken.PARENTHESIS_CLOSE and _parameters_expected is not None:
-        _parameters_expected.append((_new_param_name, "int", _new_param_type))
+        _parameters_expected.append([_new_param_name, "int", _new_param_type])
         _symbol_table_stack += _parameters_expected
         _parameters_expected = None
         _new_param_name = None
@@ -248,8 +289,8 @@ def apply_rule(seq: str, scan_token_type: ScanTokenType, parse_tokens: list, dep
     parse_token_equivalent = get_parse_token_for_seq(seq, scan_token_type)
     init_token: ParseToken
     init_token = parse_tokens[0]
-    semantic_check(init_token)
     construct_sem_sym_table_and_scope_stack(seq, init_token)
+    determine_assign_flag(parse_tokens)
     check_num_id_for_ss(init_token, seq)
     construct_brace_tracking_stack(init_token)
     if type(init_token) == ActionSymbol:
