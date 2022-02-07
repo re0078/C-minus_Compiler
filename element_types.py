@@ -62,7 +62,7 @@ class ScanTokenType(Enum):
     WHITESPACE = ScanState(whitespaces_set, ends=True),
     KEYWORD = ScanState(keywords_list, ends=True, repeatable=False),
     EOF = (),
-    ERROR = (),
+    ERROR = ()
 
     def get_state(self, state_order: int) -> ScanState:
         return self.value[state_order]
@@ -209,10 +209,10 @@ class AssignMode(Enum):
     NUM_VALUING = 4,
     FUNCTION_CALL = 5,
     ARRAY_DECLARATION = 6,
+    ARRAY_VALUING = 7,
 
 
 class ActionSymbol(Enum):
-    PID = 0,
     ADD = 1,
     MULT = 2,
     SUB = 3,
@@ -238,7 +238,7 @@ class ParseRule(Enum):
     R5 = [ParseToken.DECLARATION_PRIME, [[ParseToken.FUN_DECLARATION_PRIME, ],
                                          [ParseToken.VAR_DECLARATION_PRIME, ]]],
     R6 = [ParseToken.VAR_DECLARATION_PRIME, [[ParseToken.SEMICOLON, ActionSymbol.ASSIGN],
-                                             [ParseToken.BRACKET_OPEN, ParseToken.NUM, ActionSymbol.ASSIGN,
+                                             [ParseToken.BRACKET_OPEN, ParseToken.NUM,
                                               ParseToken.BRACKET_CLOSE, ParseToken.SEMICOLON, ActionSymbol.ASSIGN]]],
     R7 = [ParseToken.FUN_DECLARATION_PRIME, [[ActionSymbol.ASSIGN, ParseToken.PARENTHESIS_OPEN, ParseToken.PARAMS,
                                               ParseToken.PARENTHESIS_CLOSE, ParseToken.COMPOUND_STMT], ]],
@@ -268,7 +268,8 @@ class ParseRule(Enum):
                                         ParseToken.UNTIL, ParseToken.PARENTHESIS_OPEN, ParseToken.EXPRESSION,
                                         ParseToken.PARENTHESIS_CLOSE, ActionSymbol.JPF, ActionSymbol.JP], ]],
     R20 = [ParseToken.RETURN_STMT, [[ParseToken.RETURN, ParseToken.RETURN_STMT_PRIME, ActionSymbol.JP], ]],
-    R21 = [ParseToken.RETURN_STMT_PRIME, [[ParseToken.SEMICOLON, ], [ParseToken.EXPRESSION, ParseToken.SEMICOLON]]],
+    R21 = [ParseToken.RETURN_STMT_PRIME, [[ParseToken.SEMICOLON, ], [ParseToken.EXPRESSION, ActionSymbol.ASSIGN,
+                                                                     ParseToken.SEMICOLON]]],
     R22 = [ParseToken.EXPRESSION, [[ParseToken.SIMPLE_EXPRESSION_ZEGOND, ], [ParseToken.ID, ParseToken.B], ]],
     R23 = [ParseToken.B, [[ParseToken.IS, ParseToken.EXPRESSION, ActionSymbol.ASSIGN],
                           [ParseToken.BRACKET_OPEN, ParseToken.EXPRESSION, ParseToken.BRACKET_CLOSE, ParseToken.H],
@@ -295,11 +296,13 @@ class ParseRule(Enum):
     R38 = [ParseToken.FACTOR, [[ParseToken.PARENTHESIS_OPEN, ParseToken.EXPRESSION, ParseToken.PARENTHESIS_CLOSE],
                                [ParseToken.ID, ParseToken.VAR_CALL_PRIME], [ParseToken.NUM, ActionSymbol.ASSIGN]]],
     R39 = [ParseToken.VAR_CALL_PRIME, [[ActionSymbol.ASSIGN, ParseToken.PARENTHESIS_OPEN, ParseToken.ARGS,
-                                        ParseToken.PARENTHESIS_CLOSE, ActionSymbol.JP], [ParseToken.VAR_PRIME, ]]],
+                                        ParseToken.PARENTHESIS_CLOSE, ActionSymbol.ASSIGN, ActionSymbol.JP],
+                                       [ParseToken.VAR_PRIME, ]]],
     R40 = [ParseToken.VAR_PRIME, [[ParseToken.BRACE_OPEN, ParseToken.EXPRESSION, ParseToken.BRACKET_CLOSE],
                                   [ParseToken.EPSILON, ]]],
     R41 = [ParseToken.FACTOR_PRIME, [[ActionSymbol.ASSIGN, ParseToken.PARENTHESIS_OPEN, ParseToken.ARGS,
-                                      ParseToken.PARENTHESIS_CLOSE, ActionSymbol.JP], [ParseToken.EPSILON, ]]],
+                                      ParseToken.PARENTHESIS_CLOSE, ActionSymbol.ASSIGN, ActionSymbol.JP],
+                                     [ParseToken.EPSILON, ]]],
     R42 = [ParseToken.FACTOR_ZEGOND, [[ParseToken.PARENTHESIS_OPEN, ParseToken.EXPRESSION,
                                        ParseToken.PARENTHESIS_CLOSE], [ParseToken.NUM, ActionSymbol.ASSIGN]]],
     R43 = [ParseToken.ARGS, [[ParseToken.ARG_LIST, ], [ParseToken.EPSILON, ], ]],

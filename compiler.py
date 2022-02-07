@@ -12,6 +12,9 @@ lexical_errors_file_name = "lexical_errors.txt"
 symbols_file_name = 'symbol_table.txt'
 parse_tree_file_name = "parse_tree.txt"
 syntax_errors_file_name = "syntax_errors.txt"
+expected_file_name = "expected.txt"
+output_file_name = "output.txt"
+semantic_errors_file_name = "semantic_errors.txt"
 DEBUG = True
 _line_idx = 1
 _symbol_idx = 1
@@ -37,7 +40,7 @@ def dprint(*string):  # debug print
 
 
 def run(input_fn: str, tokens_fn: str, lexical_errors_fn: str, symbols_fn: str, parse_tree_fn: str,
-        syntax_errors_fn: str):
+        syntax_errors_fn: str, output_fn: str, semantic_errors_fn: str, expected_fn: str):
     global DEBUG, _line_idx, _found_lexical_error, _symbol_idx, _found_syntax_error
     _found_lexical_error = False
     next_line_flag = True
@@ -45,7 +48,8 @@ def run(input_fn: str, tokens_fn: str, lexical_errors_fn: str, symbols_fn: str, 
     prev_err_line_idx = math.inf
     with open(input_fn, 'r') as input_f, open(tokens_fn, 'w') as tokens_f, open(lexical_errors_fn, 'w') as \
             lexical_errors_f, open(symbols_fn, 'w') as symbols_f, open(parse_tree_fn, 'w') as parse_tree_f, \
-            open(syntax_errors_fn, 'w') as syntax_errors_f:
+            open(syntax_errors_fn, 'w') as syntax_errors_f, open(output_fn, 'w') as output_f, \
+            open(expected_fn, 'w') as expected_f, open(semantic_errors_fn, 'w') as semantic_errors_f:
         ids_table = list()
         codegen.initiation_routine()
         parse_tokens, depth, tree_entries = [ParseRule.R1.get_token(), ], [0], []
@@ -124,11 +128,15 @@ def run(input_fn: str, tokens_fn: str, lexical_errors_fn: str, symbols_fn: str, 
         for sym in ids_table:
             symbols_f.write(f"{item_no}.\t{sym}\n")
             item_no += 1
+        codegen.exec_pb(output_f, expected_f)
         input_f.close()
         tokens_f.close()
         lexical_errors_f.close()
         symbols_f.close()
+        output_f.close()
+        expected_f.close()
+        semantic_errors_f.close()
 
 
 run(input_file_name, tokens_file_name, lexical_errors_file_name, symbols_file_name, parse_tree_file_name,
-    syntax_errors_file_name)
+    syntax_errors_file_name, output_file_name, semantic_errors_file_name, expected_file_name)

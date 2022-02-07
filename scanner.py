@@ -5,6 +5,11 @@ _cur_seq = ""
 _remained_char = ""
 _cur_state_order = 0
 _token_type_determined = False
+_output_func = "int prtval; " \
+               "void output(int val){" \
+               "prtval = val;" \
+               "}"
+_output_func_it = 0
 
 
 def flush():
@@ -60,11 +65,15 @@ def scan_process(c: str, token_type: ScanTokenType) -> (bool, bool):
 
 
 def get_next_token(file) -> (bool, ScanTokenType, ScanerErrorType, str, str):
-    global _cur_seq, _remained_char, _token_type_determined
+    global _cur_seq, _remained_char, _token_type_determined, _output_func, _output_func_it
 
     def look_ahead(file, is_asterisk: bool) -> (bool, ScanerErrorType):
-        global _cur_seq, _remained_char
-        look_ahead_c = file.read(1)
+        global _cur_seq, _remained_char, _output_func, _output_func_it
+        if _output_func_it >= len(_output_func):
+            look_ahead_c = file.read(1)
+        else:
+            look_ahead_c = _output_func[_output_func_it]
+            _output_func_it += 1
         if not look_ahead_c:
             return True, None
         if look_ahead_c not in valid_chars_set:
@@ -77,7 +86,10 @@ def get_next_token(file) -> (bool, ScanTokenType, ScanerErrorType, str, str):
             _remained_char = look_ahead_c
             return False, None
         else:
-            file.seek(file.tell() - 1, 0)
+            if _output_func_it >= len(_output_func):
+                file.seek(file.tell() - 1, 0)
+            else:
+                _output_func_it -= 1
             if look_ahead_c in asterisk_set.union(comment_set):
                 return False, None
             if look_ahead_c in valid_chars_set:
@@ -90,7 +102,14 @@ def get_next_token(file) -> (bool, ScanTokenType, ScanerErrorType, str, str):
         return False, token_type, None, _cur_seq, _remained_char
 
     """initial character"""
-    c = _remained_char if len(_remained_char) != 0 else file.read(1)
+    if len(_remained_char) != 0:
+        c = _remained_char
+    else:
+        if _output_func_it >= len(_output_func):
+            c = file.read(1)
+        else:
+            c = _output_func[_output_func_it]
+            _output_func_it += 1
     if not c:
         return True, ScanTokenType.EOF, None, _cur_seq, _remained_char
     if c in asterisk_set:
@@ -118,7 +137,11 @@ def get_next_token(file) -> (bool, ScanTokenType, ScanerErrorType, str, str):
             continue
         while read:
             """ scan function is reading, token accepted """
-            c = file.read(1)
+            if _output_func_it >= len(_output_func):
+                c = file.read(1)
+            else:
+                c = _output_func[_output_func_it]
+                _output_func_it += 1
             if not c:
                 if accepted:
                     return get_accepted_token(token_type)
