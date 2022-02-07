@@ -1,16 +1,18 @@
-/*=== recursive sample 1 ====*/
-
-int fact(int n) {
-    int f;
-    if (n == 1) {
-	f = 1;
-    } else {
-        f = fact(n - 1) * n;
-    } endif
-    return f;
+/*===== Sample 1 =====*/
+int foo(int x){
+	if (x < 0){
+		output(x);
+		return 1;
+	}
+	else {
+		output(x);
+		return x + 2;
+	} endif
 }
-
-void main(void)
-{
-     output(fact(3));
+void main(void){
+	int i;
+	i= foo(0);
+	output(i);
+	i=foo(10);
+	output(i);
 }
